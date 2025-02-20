@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script src="wrapWebGL25.js"></script>
+    <meta charset="utf-8">
+    <title>Custom Rubik's</title>
+    <link rel="icon" href="/rubixcube.png">
+    <!-- part of a multi-part demonstration: see cs418.cs.illinois.edu -->
+    <script src="wrapWebGL25.js"></script>
+    <script src="math20.js"></script>
+
+
+<!-- The source code of a vertex shader directly in the HTML. The 'type=' command can have any value except "javascript" and just tells the browser not to try to run the code as javascript. -->
+<script id="vert" type="glsl">
+#version 300 es
+layout(location=0) in vec4 position;
+layout(location=1) in vec4 color;
+layout(location=2) in vec3 normal;
+layout(location=3) in vec2 texCoord;
+out vec4 color2;
+out vec3 vnormal;
+out vec2 vTexCoord;
+out float xval;
+out float yval;
+out float zval;
+uniform mat4 mv;
+uniform mat4 p;
+void main() {
+    gl_Position = p * mv * position;
+    vnormal = mat3(mv) * normal;
+    xval = position.x;
+    yval = position.y;
+    zval = position.z;
+    color2 = color;
+    vTexCoord = texCoord;
+}
+</script>
+
+
+<!-- The source code of a fragment shader. -->
+<script id="frag" type="glsl">
+#version 300 es
+precision highp float;
+uniform vec4 color;
+uniform vec3 lightdir;
+uniform vec3 halfway;
+uniform vec3 lightcolor;
+uniform sampler2D img_texture;
+out vec4 fragColor;
+in vec3 vnormal;
+in vec4 color2;
+in vec2 vTexCoord;
+void main() {
+    // fragColor = color2;
+    vec4 texColor = texture(img_texture, vTexCoord);
+    vec3 N = normalize(vnormal);
+    vec3 L = normalize(lightdir);
+    float lambert = max(dot(N, L), 0.0);
+    vec3 diffuse = lightcolor * lambert;
+    float blinn = pow(max(dot(N, halfway), 0.0), 64.0) * (3.0 * color2.a); // alpha used to multiply spec light
+    vec3 specular = lightcolor * blinn;
+    vec3 epic = vec3(1.0,0.0,1.0);
+    // fragColor = texColor * vec4(epic.rgb * (diffuse) + specular, 1.0);
+    fragColor = vec4(epic.rgb * (diffuse), 0.05);
+}
+</script>
+
+<!-- The source code of a fragment shader. -->
+<script id="fragDef2" type="glsl">
+    #version 300 es
+    precision highp float;
+    uniform vec4 color;
+    uniform vec3 lightdir;
+    uniform vec3 halfway;
+    uniform vec3 lightcolor;
+    uniform sampler2D img_texture;
+    out vec4 fragColor;
+    in vec3 vnormal;
+    in vec4 color2;
+    in vec2 vTexCoord;
+    in float xval;
+    in float yval;
+    in float zval;
+    void main() {
+        // fragColor = color2;
+        vec4 texColor = texture(img_texture, vTexCoord);
+        vec3 N = normalize(vnormal);
+        vec3 L = normalize(lightdir);
+        float lambert = max(dot(N, L), 0.0);
+        vec3 diffuse = lightcolor * lambert;
+        float blinn = pow(max(dot(N, halfway), 0.0), 16.0); // alpha used to multiply spec light
+        vec3 specular = lightcolor * blinn;
+        // cube blue
+        //if  (color2.b == 1.0 && color2.g == 0.0) {
+        //    fragColor = vec4(color2.rgb * (diffuse) + specular, 0.8);
+        //}
+        // object blue
+        // xval < 0.5 && xval > -0.5 && zval < 0.5 && zval > -0.5 && (yval > -1.0 || yval == -1.0) && yval < -0.5
+        //if (zval < 0.5 && xval < 0.5 && xval > -0.5 && yval < 0.5 && yval > -0.5) { // 
+        //    fragColor = vec4(0.0, 0.0, (color2.rgb * (diffuse) + specular + 0.25).b, 1.0);
+        //} else {
+            // fragColor = vec4(0.0, 0.0, 1.0, 1.0);
+            fragColor = vec4(color2.rgb * (diffuse) + specular, 1.0);
+        //}
+    }
+    </script>
+
+    <script id="fragDef" type="glsl">
+        #version 300 es
+        precision highp float;
+        uniform vec4 color;
+        uniform vec3 lightdir;
+        uniform vec3 halfway;
+        uniform vec3 lightcolor;
+        uniform sampler2D img_texture;
+        out vec4 fragColor;
+        in vec3 vnormal;
+        in vec4 color2;
+        in vec2 vTexCoord;
+        in float xval;
+        in float yval;
+        in float zval;
+        void main() {
+            // fragColor = color2;
+            vec4 texColor = texture(img_texture, vTexCoord);
+            vec3 N = normalize(vnormal);
+            vec3 L = normalize(lightdir);
+            float lambert = max(dot(N, L), 0.0);
+            vec3 diffuse = lightcolor * lambert;
+            float blinn = pow(max(dot(N, halfway), 0.0), 16.0); // alpha used to multiply spec light
+            vec3 specular = lightcolor * blinn;
+            
+            // Define target colors for each side:
+            vec3 frontColor  = vec3(0.65, 0.0, 0.75);   // purple
+            vec3 rightColor  = vec3(0.0, 1.0, 1.0);   // cyan
+            vec3 leftColor   = vec3(0.0, 0.0, 1.0);   // blue
+            vec3 topColor    = vec3(1.0, 1.0, 0.0);   // yellow
+            vec3 bottomColor = vec3(1.0, 0.0, 1.0);   // magenta
+            
+            // Compute weights for each side using dot products.
+            // Note: adjust the direction vectors as needed for your model.
+            float wFront  = max(dot(N, vec3(0.0, 0.0, 1.0)), 0.0);
+            float wRight  = max(dot(N, vec3(1.0, 0.0, 0.0)), 0.0);
+            float wLeft   = max(dot(N, vec3(-1.0, 0.0, 0.0)), 0.0);
+            float wTop    = max(dot(N, vec3(0.0, 1.0, 0.0)), 0.0);
+            float wBottom = max(dot(N, vec3(0.0, -1.0, 0.0)), 0.0);
+            
+            float total = wFront + wRight + wLeft + wTop + wBottom;
+            // To avoid division by zero, if total is 0, default to white.
+            vec3 sideColor = (total > 0.0)
+                ? (wFront*frontColor + wRight*rightColor + wLeft*leftColor + wTop*topColor + wBottom*bottomColor) / total
+                : vec3(1.0);
+            
+            // Use the computed sideColor in place of color2.rgb.
+            // cube blue
+            //if  (color2.b == 1.0 && color2.g == 0.0) {
+            //    fragColor = vec4(color2.rgb * (diffuse) + specular, 0.8);
+            //}
+            // object blue
+            // xval < 0.5 && xval > -0.5 && zval < 0.5 && zval > -0.5 && (yval > -1.0 || yval == -1.0) && yval < -0.5
+            //if (zval < 0.5 && xval < 0.5 && xval > -0.5 && yval < 0.5 && yval > -0.5) { // 
+            //    fragColor = vec4(0.0, 0.0, (color2.rgb * (diffuse) + specular + 0.25).b, 1.0);
+            //} else {
+                // fragColor = vec4(0.0, 0.0, 1.0, 1.0);
+                fragColor = vec4(sideColor * diffuse + specular, 1.0);
+            //}
+            if  (color2.b == 1.0) {
+                fragColor = vec4(0.75, 0.75, 0.75, 1.0);
+                // fragColor = vec4(sideColor * diffuse + specular, 1.0);
+            }
+        }
+    </script>
+    
+
+<!-- Code I don't expect to change. -->
+<script>
+const IlliniBlue = new Float32Array([0.075, 0.16, 0.292, 1])
+const IlliniOrange = new Float32Array([1, 0.373, 0.02, 1])
+const IlliniWhite = new Float32Array([1, 1, 1, 1])
+const IdentityMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1])
+
+/**
+ * Given the source code of a vertex and fragment shader, compiles them,
+ * and returns the linked program.
+ */
+function compileShader(vs_source, fs_source) {
+    // Create and compile the vertex shader
+    const vs = gl.createShader(gl.VERTEX_SHADER)
+    gl.shaderSource(vs, vs_source)
+    gl.compileShader(vs)
+    // Checks if vertex shader compiled successfully -> if not, log the error
+    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(vs))
+        throw Error("Vertex shader compilation failed")
+    }
+    // Create and compile the fragment shader
+    const fs = gl.createShader(gl.FRAGMENT_SHADER)
+    gl.shaderSource(fs, fs_source)
+    gl.compileShader(fs)
+    // Checks if fragment shader compiled successfully -> if not, log the error
+    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(fs))
+        throw Error("Fragment shader compilation failed")
+    }
+    // Create the shader program, attaches both vertex and fragment shaders
+    const program = gl.createProgram()
+    gl.attachShader(program, vs)
+    gl.attachShader(program, fs)
+    gl.linkProgram(program) // <-- Link the shaders into the program
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error(gl.getProgramInfoLog(program))
+        throw Error("Linking failed")
+    }
+    // Store uniform locations here
+    const uniforms = {}
+    for(let i=0; i<gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS); i+=1) {
+        let info = gl.getActiveUniform(program, i)
+        uniforms[info.name] = gl.getUniformLocation(program, info.name)
+    }
+    program.uniforms = uniforms
+
+    return program
+}
+
+/**
+ * Sends per-vertex data to the GPU and connects it to a VS input
+ * 
+ * @param data    a 2D array of per-vertex data (e.g. [[x,y,z,w],[x,y,z,w],...])
+ * @param loc     the layout location of the vertex shader's `in` attribute
+ * @param mode    (optional) gl.STATIC_DRAW, gl.DYNAMIC_DRAW, etc
+ * 
+ * @returns the ID of the buffer in GPU memory; useful for changing data later
+ */
+function supplyDataBuffer(data, loc, mode) {
+    if (mode === undefined) mode = gl.STATIC_DRAW
+    
+    const buf = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf)
+    const f32 = new Float32Array(data.flat())
+    gl.bufferData(gl.ARRAY_BUFFER, f32, mode)
+    
+    gl.vertexAttribPointer(loc, data[0].length, gl.FLOAT, false, 0, 0)
+    gl.enableVertexAttribArray(loc)
+    
+    return buf;
+}
+
+/**
+ * Creates a Vertex Array Object and puts into it all of the data in the given
+ * JSON structure, which should have the following form:
+ * 
+ * ````
+ * {"triangles": a list of of indices of vertices
+ * ,"attributes":
+ *  [ a list of 1-, 2-, 3-, or 4-vectors, one per vertex to go in location 0
+ *  , a list of 1-, 2-, 3-, or 4-vectors, one per vertex to go in location 1
+ *  , ...
+ *  ]
+ * }
+ * ````
+ * 
+ * @returns an object with four keys:
+ *  - mode = the 1st argument for gl.drawElements
+ *  - count = the 2nd argument for gl.drawElements
+ *  - type = the 3rd argument for gl.drawElements
+ *  - vao = the vertex array object for use with gl.bindVertexArray
+ */
+function setupGeomery(geomA) { // changed param name during faulty intial implementation of rendering multiple shapes
+    var triangleArray = gl.createVertexArray()
+    // console.log("setGeomery() called")
+    gl.bindVertexArray(triangleArray)
+    // console.log("attributes")
+    // console.log(geomA)
+    for(let i=0; i<geomA.attributes.length; i+=1) {
+        let data = geomA.attributes[i]
+        supplyDataBuffer(data, i)
+    }
+
+    var indices = new Uint16Array(geomA.triangles.flat())
+    var indexBuffer = gl.createBuffer()
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW)
+    // console.log("setup geom:")
+    // console.log(geomA)
+    return {
+        mode: gl.TRIANGLES,
+        count: indices.length, //+ indices2.length,
+        faceCount: geomA.triangles.length,
+        type: gl.UNSIGNED_SHORT,
+        vao: triangleArray
+        // vao: tetrahedronArray
+    }
+}
+
+var maxVert = 0;
+var normOk = 0;
+
+function addNormals(geom) {
+    if (calcNormals === 1) {
+        let ni = geom.attributes.length
+        geom.attributes.push([])
+        for(let i = 0; i < geom.attributes[0].length; i+=1) {
+            geom.attributes[ni].push([0,0,0])
+        }
+        
+        for(let i = 0; i < geom.triangles.length; i+=1) {
+            let p0 = geom.attributes[0][geom.triangles[i][0]]
+            // console.log(p0)
+            let p1 = geom.attributes[0][geom.triangles[i][1]]
+            // console.log("hellooo")
+            // console.log(p1)
+            let p2 = geom.attributes[0][geom.triangles[i][2]]
+            let e1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]]
+            let e2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]]
+            
+            let n = [
+                e1[1] * e2[2] - e1[2] * e2[1],  
+                e1[2] * e2[0] - e1[0] * e2[2],  
+                e1[0] * e2[1] - e1[1] * e2[0]   
+            ];
+            geom.attributes[ni][geom.triangles[i][0]] = add(geom.attributes[ni][geom.triangles[i][0]], n)
+            geom.attributes[ni][geom.triangles[i][1]] = add(geom.attributes[ni][geom.triangles[i][1]], n)
+            geom.attributes[ni][geom.triangles[i][2]] = add(geom.attributes[ni][geom.triangles[i][2]], n)
+        }
+        
+        for(let i = 0; i < geom.attributes[0].length; i+=1) {
+            geom.attributes[ni][i] = normalize(geom.attributes[ni][i])
+        }
+    } else if (calcNormals === 2) {
+        // console.log("pushing given normals 2")
+        for(let i = 0; i < parsedNormals.length; i+=1) {
+            normals[i] = normalize(parsedNormals[i])
+        }
+        geom.attributes.push(parsedNormals)
+    } else {
+        
+        // console.log("pushing given normals")
+        for(let i = 0; i < normals.length; i+=1) {
+            normals[i] = normalize(normals[i])
+        }
+        geom.attributes.push(normals)
+    
+    }
+    if (texCoords.length !== 0 && useTexture === 1) {
+        // console.log("using texture")
+        geom.attributes.push(texCoords)
+        // if (colorsGiven === 0) {
+        let vertLength = 0;
+        if (useParsed === 1) {
+            vertLength = parsedVertices.length;
+        } else {
+            vertLength = vertices.length
+        }
+        // the bitch
+        for (let i = 0; i < vertLength; i+=1) {
+            if (filePath != "cube.obj") {
+                color[i] = [1, 1, 1]
+            } else {
+                color[i] = [1, 0, 0]
+            }
+        }
+        geom.attributes.color = color;
+        // }
+    } else if (texCoords.length === 0){
+        // console.log("adding texcoords cuz theres none")
+        let vertLength = 0;
+        if (useParsed === 1) {
+            vertLength = parsedVertices.length;
+        } else {
+            vertLength = vertices.length
+        }
+        for (let i = 0; i < vertLength; i+=1) {
+            texCoords.push([1,1])
+        }
+        geom.attributes.push(texCoords)
+    } else {
+        // console.log("not using texture")
+        let vertLength = 0;
+        if (useParsed === 1) {
+            vertLength = parsedVertices.length;
+        } else {
+            vertLength = vertices.length
+        }
+        for (let i = 0; i < vertLength; i+=1) {
+            texCoords.push([1,1])
+        }
+        geom.attributes.push(texCoords)
+    }
+    // add norm only once after load
+    maxVert = 0;
+    if (normOk === 1) {
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            for (let j = 0; j < 3; j += 1) {
+                if (Math.abs(geom.attributes[0][i][j]) > Math.abs(maxVert) && geom.attributes[0][i][j] !== 0.0) {
+                    maxVert = geom.attributes[0][i][j];
+                }
+                if (geom.attributes[0][i][j] === -1.0 * maxVert && maxVert < 0.0) {
+                    maxVert = geom.attributes[0][i][j];
+                }
+            }
+            
+        }
+        normOk = 0;
+    }
+    let mult = 1.0 / maxVert
+    
+    console.log("Max vert = ", maxVert)
+    if (maxVert !== 0) {
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            for (let j = 0; j < 3; j += 1) {
+                geom.attributes[0][i][j] /= maxVert;
+                if (maxVert - 1.0 >= 0.01) {
+                    geom.attributes[0][i][j] *= 1.5; 
+                }
+            }
+        }
+    }
+    let minX = geom.attributes[0][0][0];
+    let maxX = geom.attributes[0][0][0];
+    let minY = geom.attributes[0][0][1];
+    let maxY = geom.attributes[0][0][1];
+    let minZ = geom.attributes[0][0][2];
+    let maxZ = geom.attributes[0][0][2];
+    if (floorOrCube == 0) {
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            if (geom.attributes[0][i][0] < minX) {
+                minX = geom.attributes[0][i][0];
+            }
+            if (geom.attributes[0][i][0] > maxX) {
+                maxX = geom.attributes[0][i][0];
+            }
+            if (geom.attributes[0][i][1] < minY) {
+                minY = geom.attributes[0][i][1];
+            }
+            if (geom.attributes[0][i][1] > maxY) {
+                maxY = geom.attributes[0][i][1];
+            }
+            if (geom.attributes[0][i][2] < minZ) {
+                minZ = geom.attributes[0][i][2];
+            }
+            if (geom.attributes[0][i][2] > maxZ) {
+                maxZ = geom.attributes[0][i][2];
+            }
+        }
+        let extremeVals = [maxX - minX, maxY - minY, maxZ - minZ];
+        let maxVal = 0;
+        for (let i = 0; i < extremeVals.length; i += 1) {
+            let curr = extremeVals[i];
+            if (Math.abs(curr) > Math.abs(maxVal)) {
+                maxVal = curr;
+            }
+        }
+        console.log("MaxVAL = ", maxVal)
+        let scalar = 1.0 / maxVal;
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            geom.attributes[0][i][0] *= scalar;
+            geom.attributes[0][i][1] *= scalar;
+            geom.attributes[0][i][2] *= scalar;
+        }
+        
+    }
+    if (firstTime == 1) {
+        firstTime = 0
+        minZ = 1000;
+        let center2 = [0, 0, 0];
+        let vertexCount2 = 0;
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+                center2[0] += geom.attributes[0][i][0];
+                center2[1] += geom.attributes[0][i][1];
+                center2[2] += geom.attributes[0][i][2];
+                vertexCount2 += 1;
+        }
+        center2[0] /= vertexCount2;
+        center2[1] /= vertexCount2;
+        center2[2] /= vertexCount2;
+
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            geom.attributes[0][i][0] -= center2[0];
+            geom.attributes[0][i][1] -= center2[1];
+            geom.attributes[0][i][2] -= center2[2];
+        }
+    }
+    center = [0, 0]
+    for (let i = 0; i < geom.attributes[0].length; i += 1) {
+        for (let j = 0; j < 2; j += 1) {
+            center[j] += geom.attributes[0][i][j];
+        }
+    }
+    center[0] /= geom.attributes[0].length;
+    center[1] /= geom.attributes[0].length;
+    for (let i = 0; i < geom.attributes[0].length; i += 1) {
+        geom.attributes[0][i][0] -= center[0];
+        geom.attributes[0][i][1] -= center[1];
+    }
+    // console.log("addnormals geom post norm:")
+    // console.log(geom)
+}
+</script>
+
+
+<style>
+    /* Set the overall background to baby blue */
+    body {
+      background-color: #89CFF0; /* A common baby blue hex code */
+      margin: 0;
+      padding: 0;
+    }
+    /* Shrink and center the canvas */
+    #glCanvas {
+      display: block;
+      margin: 20px auto; /* centers the canvas horizontally with some top/bottom margin */
+      width: 800px;   /* set desired width */
+      height: 500px;  /* set desired height */
+      /* Optionally, add a border or other styles: */
+      border: 2px solid #000;
+    }
+  </style>
+</head>
+<body>
+    <img src="objload/rubixcube.png" alt="rubik's cube icon">
+    <form class="controls" action="javascript:void(0);">
+        <label>Upload OBJ file:
+          <input id="objUpload" type="file" accept=".obj" />
+        </label>
+        <input id="submit" type="submit" value="Load" />
+      </form>
+    <!-- <form class="controls" action="javascript:void(0);"> -->
+        
+        <!-- <label>Provided assets: <input id="file_path" type="text" value="path.obj" /></label> -->
+        <!-- <label>Image path: <input id="image_path" type="text" value="path.png" /></label> -->
+        <!-- <div id="currAxis">Fog:</div> -->
+        <!-- <input id="submit" type="submit" value="Load" /> -->
+    <!-- </form> -->
+    
+    
+    <canvas id="glCanvas" width="1200" height="600"></canvas>
+
+    <!-- All the other code in one big script element. -->
+<script>
+    var thing;
+    var thing2;
+    var head;
+    var body;
+    
+    function multiplyMatrixByVector(matrix, vector) {
+        let result = [0, 0, 0];
+
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                result[i] += matrix[i * 3 + j] * vector[j];
+            }
+        }
+
+        return result;
+    }
+
+    function transposeMatrix(matrix) {
+        let transposed = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
+        ];
+
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                transposed[j * 3 + i] = matrix[i * 3 + j];
+            }
+        }
+
+        return transposed;
+    }
+
+    function rotate2(angle, axis) {
+        cosAngle = Math.cos(angle);
+        sinAngle = Math.sin(angle);
+        axis2 = normalize2(axis);
+        let ident =  new Float32Array([1, 0, 0, 
+                      0, 1, 0,
+                      0, 0, 1]);
+        // identity matrix of cos0
+        let identAngle = new Float32Array([cosAngle, 0, 0,
+                           0, cosAngle, 0,
+                           0, 0, cosAngle]);
+        // identity matrix of sin0
+        let identAngle2 = new Float32Array([sinAngle, 0, 0,
+                          0, sinAngle, 0,
+                          0, 0, sinAngle]);
+        let term1 = m3mul(identAngle, ident);
+        // 1 - cos0
+        let negIdentAngle = new Float32Array([1 - cosAngle, 0, 0,
+                            0, 1 - cosAngle, 0,
+                            0, 0, 1 - cosAngle]);
+        // (aa^T)(1-cos0)
+        let term2 = new Float32Array([axis2[0] * axis2[0], axis2[0] * axis2[1], axis2[0] * axis2[2],
+                                    axis2[0] * axis2[1], axis2[1] * axis2[1], axis2[1] * axis2[2],
+                                    axis2[0] * axis2[2], axis2[1] * axis2[2], axis2[2] * axis2[2]]);
+        // term2 = multiplyMatrices(negIdentAngle, term2)
+        term2 = m3mul(negIdentAngle, term2);
+        let term3 = m3mul(identAngle2, m3transpose(new Float32Array(([0, -1 * axis2[2], axis2[1],
+                                                                    axis2[2], 0, -1 * axis2[0],
+                                                                    -1 * axis2[1], axis2[0], 0]))));
+        // let final = addMatrices(addMatrices(term1, term2), term3);
+        let final =  new Float32Array([0, 0, 0, 
+                      0, 0, 0,
+                      0, 0, 0]);
+        // console.log("term1 = ", term1)
+        // console.log("term2 = ", term2)
+        // console.log("term3 = ", term3)
+        final = m3add(final, term1)
+        final = m3add(final, term2)
+        final = m3add(final, term3)
+        // console.log("final = ", final)
+        return final;
+    }
+    function computeCentroid(vertices) {
+        let center = [0, 0, 0];
+        let count = 0;
+        for (let v of vertices) {
+            center[0] += v[0];
+            center[1] += v[1];
+            center[2] += v[2];
+            count++;
+        }
+        if (count > 0) {
+            center[0] /= count;
+            center[1] /= count;
+            center[2] /= count;
+        }
+        return center;
+    }
+
+
+    function left(axis, degrees, mode) {
+        // console.log("rot mat = ", rotate2(degrees, up))
+        // console.log("left geom = ", geom)
+        x_lowerBound = -0.5 
+        x_higherBound = 0.5
+        y_lowerBound = -1
+        y_higherBound = 0
+        z_lowerBound = -1
+        z_higherBound = 0
+        let topVerts = [];
+        
+        var center2; 
+        if (mode == "top" || mode == "bottom") {
+            for (let i = 0; i < thing.attributes[0].length; i++) {
+                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) ) {
+                    topVerts.push(thing.attributes[0][i]);
+                }
+            }
+            center2 = computeCentroid(topVerts);
+        }
+        for (let i = 0; i < thing.attributes[0].length; i += 1) {
+            xC = thing.attributes[0][i][0]
+            yC = thing.attributes[0][i][1]
+            zC = thing.attributes[0][i][2]
+            if (mode == "all") {
+                thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
+            } else if (mode == "left") {
+                if (xC < 0.0) {
+                    thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
+                }
+            }  else if (mode == "right") {
+                if (xC > 0.0) {
+                    thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
+                }
+            }
+            else if (mode == "top") {
+                if (zC > 0.0) {
+                    thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
+                }
+            }
+
+            else if (mode == "bottom") {
+                if (zC < 0.0) {
+                    thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
+                }
+            }
+        }
+        if (mode == "top" || mode == "bottom" ) {
+            let topVerts2 = []
+            for (let i = 0; i < thing.attributes[0].length; i++) {
+                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) ) {
+                    topVerts2.push(thing.attributes[0][i]);
+                }
+            }
+            let center3 = computeCentroid(topVerts2);
+            let toAdd = [center2[0] - center3[0], center2[1] - center3[1], center2[2] - center3[2],]
+            for (let i = 0; i < thing.attributes[0].length; i += 1) {
+                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) ) {
+                thing.attributes[0][i][0] += toAdd[0]
+                thing.attributes[0][i][1] += toAdd[1]
+                thing.attributes[0][i][2] += toAdd[2]
+                }
+            }
+        }
+    }
+
+    /** Draw one frame */
+    function draw(seconds) {
+    
+        // NON TEXTURE SHADER
+        gl.clearColor(...IlliniWhite) // white background
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        gl.useProgram(programDef)
+        
+        let v = m4view(eye, [0,0,0], [0,1,1])
+        let vScalar = 1.75
+        v = m4mul(v, m4scale(vScalar,vScalar,vScalar));
+        gl.uniformMatrix4fv(programDef.uniforms.mv, false, v) // , m4mul(v,m)
+        gl.uniformMatrix4fv(programDef.uniforms.p, false, p)
+        
+        gl.uniform3fv(programDef.uniforms.lightcolor, [1,1,1])
+
+        // BUILDING SUN MATRIX:
+        let sunRotSpeed = (seconds * Math.PI) // spinning a full rotation once every two seconds
+        // sunRotSpeed = 20;
+        let m = m4rotZ(sunRotSpeed / 10) 
+        m = m4rotY(0) 
+
+        let msmall = m4tom3(m)
+        let mfinal = m3mul(msmall, normalize([1,1,1]))
+        gl.uniform3fv(programDef.uniforms.lightdir, mfinal)
+        gl.uniform3fv(programDef.uniforms.halfway, normalize([mfinal[0], mfinal[1], mfinal[2] + 1]))
+
+        // let m = m4rotY(0) 
+        // let sun =  m4mul(m, m4rotX(-1.5708) , m4scale(.2,.2,.2)) // sun
+        // let sun =  m4mul(m4trans(0, 0, 0), m, m4rotX(1.5708))
+        let sun =  m4mul(m, m4rotZ(dz), m4rotX(dy),m4scale(wd, wd, wd))
+        k = 1
+
+        // PLANE:
+        gl.bindVertexArray(geomB.vao)
+        k = 1
+        gl.uniformMatrix4fv(programDef.uniforms.mv, false, m4mul(v,sun, m4scale(k,k,k)))
+        gl.drawElements(geomB.mode, geomB.count, geomB.type, 0)
+
+        gl.bindVertexArray(geomC.vao)
+
+        //CUBE:
+        // gl.enable(gl.BLEND);
+        // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        
+        // // HEAD:
+        // gl.disable(gl.DEPTH_TEST);  // Disable depth testing for transparent objects
+        // h = 1
+        // // gl.uniformMatrix4fv(programDef.uniforms.mv, false, m4mul(v,sun, m4trans(0,0,.75),m4scale(h, h, h)))
+        // // gl.drawElements(geomC.mode, geomC.count, geomC.type, 0)
+        // // BODY:
+        // gl.uniformMatrix4fv(programDef.uniforms.mv, false, m4mul(v,sun, m4trans(0,0,0), m4scale(h, h, h)))
+        // gl.drawElements(geomC.mode, geomC.count, geomC.type, 0)
+        // gl.enable(gl.DEPTH_TEST);  // Disable depth testing for transparent objects
+
+
+        // OBJECT:
+        k = 1
+        gl.bindVertexArray(geomA.vao)
+        gl.uniformMatrix4fv(programDef.uniforms.mv, false, m4mul(v,sun, m4scale(k,k,k)))
+        gl.drawElements(geomA.mode, geomA.count, geomA.type, 0)
+            
+    }
+    
+    /** Compute any time-varying or animated aspects of the scene */
+    let previousSecond = 0;
+    var rightFlag = 1.0;
+    function tick(milliseconds) {
+        let seconds = milliseconds / 1000;
+
+        draw(seconds)
+        requestAnimationFrame(tick)
+        if (keysBeingPressed['ArrowUp']) {
+            center = [eye[0] + 0.02 * forward[0], eye[1] + 0.02 * forward[1], eye[2] + 0.02 * forward[2]]
+            dy += 0.01
+        } 
+        if (keysBeingPressed['ArrowDown']) {
+            center = [eye[0] + 0.02 * forward[0], eye[1] + 0.02 * forward[1], eye[2] + 0.02 * forward[2]]
+            dy -= 0.01
+        } 
+        if (keysBeingPressed['ArrowRight']) {
+            dz += 0.01
+            center = [eye[0] + 0.02 * forward[0], eye[1] + 0.02 * forward[1], eye[2] + 0.02 * forward[2]]
+        } 
+        if (keysBeingPressed['ArrowLeft']) {
+            dz -= 0.01
+            center = [eye[0] + 0.02 * forward[0], eye[1] + 0.02 * forward[1], eye[2] + 0.02 * forward[2]]
+        } 
+        if (keysBeingPressed['w']) {
+            wd += 0.005
+        } 
+        if (keysBeingPressed['s']) {
+            wd -= 0.005
+        } 
+        if (letsGo) {
+        if (keysBeingPressed['u']) {
+            let ax = right
+            ax = [1, 0, 0]
+            left(ax, Math.PI/2.0, "all")
+            addNormals(thing)
+            window.geomA = setupGeomery(thing)
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+        } 
+        if (keysBeingPressed['j']) {
+            let ax = right
+            ax = [1, 0, 0]
+            left(forward, Math.PI/2.0, "all")
+            addNormals(thing)
+            window.geomA = setupGeomery(thing)
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+        } 
+        if (keysBeingPressed['i']) {
+            // wd -= 0.005
+            let ax = right
+            ax = [1, 0, 0]
+            // if (rightFlag === -1.0) {
+            //     ax = up
+            // }
+            left(ax, Math.PI/2.0, "left")
+            // console.log("new geom: ", thing)
+            addNormals(thing)
+            window.geomA = setupGeomery(thing)
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+            // eye = [eye[0] - 0.02 * forward[0], eye[1] - 0.02 * forward[1], eye[2] - 0.02 * forward[2]]
+            // center = [center[0] - 0.02 * forward[0], center[1] - 0.02 * forward[1], center[2] - 0.02 * forward[2]]
+        } 
+        if (keysBeingPressed['o']) {
+            let ax = right
+            ax = [1, 0, 0]
+            // if (rightFlag === -1.0) {
+            //     ax = up
+            // }
+            left(ax, Math.PI/2.0, "right")
+            addNormals(thing)
+            window.geomA = setupGeomery(thing)
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+        } 
+        if (keysBeingPressed['k']) {
+            let ax = right
+            // if (rightFlag === -1.0) {
+            //     ax = right
+            // }
+            left(forward, Math.PI/2.0, "top")
+            addNormals(thing)
+            window.geomA = setupGeomery(thing)
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+        } 
+        if (keysBeingPressed['l']) {
+            let ax = right
+            left(forward, Math.PI/2.0, "bottom")
+            addNormals(thing)
+            window.geomA = setupGeomery(thing)
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+        } 
+        }
+        if (keysBeingPressed['d']) {
+            eye = [eye[0] + 0.02 * right[0], eye[1] + 0.02 * right[1], eye[2] + 0.02 * right[2]]
+            center = [center[0] + 0.02 * right[0], center[1] + 0.02 * right[1], center[2] + 0.02 * right[2]]
+        } 
+        if (keysBeingPressed['a']) {
+            eye = [eye[0] - 0.02 * right[0], eye[1] - 0.02 * right[1], eye[2] - 0.02 * right[2]]
+            center = [center[0] - 0.02 * right[0], center[1] - 0.02 * right[1], center[2] - 0.02 * right[2]]
+        } 
+        if (keysBeingPressed['e']) {
+            rightFlag *= -1.0
+        } 
+        let s = "right"
+        if (rightFlag === -1.0) {
+            s = "up"
+        }
+        // document.getElementById('currAxis').textContent = `Current axis of rotation: ${s}`;
+        
+    }
+    
+    /** Resizes the canvas to completely fill the screen */
+    function fillScreen() {
+        let canvas = document.querySelector('canvas')
+        document.body.style.margin = '0'
+        canvas.style.width = '100vw'
+        canvas.style.height = '100vh'
+        canvas.width = canvas.clientWidth
+        canvas.height = canvas.clientHeight
+        canvas.style.width = ''
+        canvas.style.height = ''
+        if (window.gl) {
+            // gl.viewport(0,0, canvas.width, canvas.height)
+            gl.viewport(-1,1, canvas.width, canvas.height)
+            // window.p = m4perspNegZ(1, 5, 1.5, canvas.width, canvas.height)
+            window.p = m4perspNegZ(0.01, 10, 2, canvas.width, canvas.height)
+        }
+    }
+    
+    var calcNormals = 1
+    var normals = []
+    var faces = []
+    var color = []
+    var texCoords = []
+    var parsedNormals = [];
+    var dict;
+    var vertices =[]
+    var useTexture = 0;
+    var colorsGiven;
+    var useParsed = 0;
+    var parsedVertices = [];
+    var parsedTex = [];
+    // OBJ parser function
+    function parseOBJ(objData) {
+        vertices = [];
+        normals = [];
+        dict = new Object();
+        texCoords = [];
+        faces = [];
+        color = [];
+        colorsGiven = 0;
+        const lines = objData.split('\n');
+        let count = 0;
+        calcNormals = 1;
+        useParsed = 0;
+        parsedVertices = []; // Final array of unique vertices
+        parsedNormals = []; // Final array of unique normals
+        parsedTex = [];
+        isCube = 0;
+        if (objData[0] === 'z') {
+            isCube = 1;
+        }
+        floorOrCube = 0;
+        for (let line of lines) {
+            line = line.trim();
+            // console.log(line);
+            if (line.startsWith('#') || line === '') continue;
+    
+            const parts = line.split(/\s+/);
+            const prefix = parts[0];
+            // console.log(line)
+            switch (prefix) {
+                case 'z':
+                    isCube = 1;
+                case 'y':
+                    floorOrCube = 1;
+                case 'v':
+                    const numbers = parts.slice(1).map(Number); // Parse numbers directly
+                    // console.log(line)
+                    if (numbers.length === 3) {
+                        // Push the 3 vertex coordinates
+                        vertices.push([parseFloat(numbers[0]), parseFloat(numbers[1]), parseFloat(numbers[2])]);
+                        // vertices.push(new Float32Array([parseFloat(numbers[0]), parseFloat(numbers[1]), parseFloat(numbers[2])]));
+                        // console.log("Numbers = ", numbers, numbers[0])
+                        // console.log("Pushing: ", [numbers[0], numbers[1], numbers[2]])
+                    } else if (numbers.length === 6) {
+                        // Push vertex and color separately
+                        // console.log("Vertex with 6 values (including color) detected");
+                        vertices.push([numbers[0], numbers[1], numbers[2]]); // Push the first 3 numbers to vertices
+                        color.push([numbers[3], numbers[4], numbers[5]]);
+                        // color.push(numbers.slice(3));          // Push the last 3 numbers as an array to color
+                        colorsGiven = 1;
+                    } else {
+                        console.log(`Unexpected number of values after 'v': ${numbers.length}`);
+                    }
+                    break;
+
+                case 'vn':
+                    // console.log(line)
+                    const numbers2 = parts.slice(1).map(Number); // Parse numbers directly
+                    // normals.push(parts.slice(1).map(Number));
+                    normals.push([numbers2[0], numbers2[1], numbers2[2]]);
+                    calcNormals = 0
+                    break;
+                case 'vt':
+                    // useTexture = 1;
+                    const numbers3 = parts.slice(1).map(Number);
+                    texCoords.push([numbers3[0], numbers3[1]]);
+                    break;
+                case 'f':
+                    // console.log("true vertices = ", vertices)
+                    const numberss = parts.slice(1).map(Number); // Parse numbers directly
+                    if (parts[1].includes('//')) {
+                        calcNormals = 2
+                        useParsed = 1;
+                        let iters = Math.ceil(numberss.length / 3)
+                        if (dict[parts[1]] === undefined) {
+                            dict[parts[1]] = count;
+                            count += 1;
+                            let vertnNorm = parts[1].split('//')
+                            let vertex = vertices[parseInt(vertnNorm[0]) - 1]
+                            let normal = normals[parseInt(vertnNorm[1]) - 1]
+                            parsedVertices.push(vertex)
+                            parsedNormals.push(normal)
+                        }
+                        for (let j = 0; j < iters; j += 1) {
+                            let partList = [parts[1], parts[2 + j], parts[3 + j]]
+                            for (let i = 2; i < 4; i += 1) {
+                                if (dict[parts[i + j]] === undefined) {
+                                    dict[parts[i + j]] = count;
+                                    count += 1;
+                                    let vertnNorm2 = parts[i + j].split('//')
+                                    let vertex = vertices[parseInt(vertnNorm2[0]) - 1]
+                                    let normal = normals[parseInt(vertnNorm2[1]) - 1]
+                                    parsedVertices.push(vertex)
+                                    parsedNormals.push(normal)
+                                    // console.log("verty =", vertex)
+                                    // console.log("normie =", normal)
+                                }
+                                
+                            }
+                            faces.push([dict[parts[1]], dict[parts[2 + j]], dict[parts[3 + j]]]);
+                        }
+                    } else if (parts[1].includes('/')) {
+                        useParsed = 1;
+                        calcNormals = 2
+                        let iters = Math.ceil(numberss.length / 3)
+                        let keySplit = parts[1].split('/')
+                        let key0 = keySplit[0] + "/" + keySplit[2]
+                        
+                        if (dict[key0] === undefined) {
+                            dict[key0] = count;
+                            count += 1;
+                            let vertnNorm = parts[1].split('/')
+                            let vertex = vertices[parseInt(vertnNorm[0]) - 1]
+                            // console.log("vertex = ", vertex)
+                            let normal = normals[parseInt(vertnNorm[2]) - 1]
+                            let tex = texCoords[parseInt(vertnNorm[1]) - 1]
+                            parsedVertices.push(vertex)
+                            parsedNormals.push(normal)
+                            parsedTex.push(tex)
+                        }
+                        for (let j = 0; j < iters; j += 1) {
+                            let partList = [parts[1], parts[2 + j], parts[3 + j]]
+                            keys = [key0]
+                            for (let i = 2; i < 4; i += 1) {
+                                let keySplit = parts[i + j].split('/')
+                                let key = keySplit[0] + "/" + keySplit[2]
+                                keys.push(key)
+                                // console.log("nested key = ", key)
+                                if (dict[key] === undefined) {
+                                    dict[key] = count;
+                                    count += 1;
+                                    let vertnNorm2 = parts[i + j].split('/')
+                                    let vertex = vertices[parseInt(vertnNorm2[0]) - 1]
+                                    let normal = normals[parseInt(vertnNorm2[2]) - 1]
+                                    let tex = texCoords[parseInt(vertnNorm2[1]) - 1]
+                                    parsedVertices.push(vertex)
+                                    parsedNormals.push(normal)
+                                    parsedTex.push(tex)
+                                    // console.log("verty =", vertex)
+                                    // console.log("normie =", normal)
+                                }                       
+                            }
+                            faces.push([dict[keys[0]], dict[keys[1]], dict[keys[2]]]);
+                        }
+                    } else {
+                        const nums = parts.slice(1).map(Number);
+                        let iters = Math.ceil(numberss.length / 3)
+                        for (let j = 0; j < iters; j += 1) {
+                            faces.push([nums[0] - 1, nums[1 + j] - 1, nums[2 + j] - 1]);
+                        }
+                    }
+                    break;
+            }
+        }
+        // console.log("og texcoords: ", texCoords);
+        texCoords = parsedTex;
+        // console.log("parsed texcoords: ", texCoords);
+
+        // console.log("vertices length =", parsedVertices.length)
+        // console.log("normals length =", parsedNormals.length)
+        // console.log("faces length =",faces.length)
+        
+        if (colorsGiven === 0) {
+            
+            let vertLength = 0;
+            var vs;
+
+            if (useParsed === 1) {
+                vertLength = parsedVertices.length;
+                vs = parsedVertices;
+            } else {
+                vertLength = vertices.length
+                vs = vertices;
+            }
+            if (floorOrCube !== 1) {
+                for(let i = 0; i < vertLength; i+=1) {
+                    color.push([1.0,1.0,0.9])
+                }
+            } else {
+                for (let i = 0; i < vertLength; i+=1) {
+                    color.push([1.0,1.0,1.0])
+                }
+            }
+            if (floorOrCube !== 1) {
+                // ...
+            } else {
+                for (let i = 0; i < vertLength; i++) {
+                    color.push([1.0, 1.0, 1.0]);
+                }
+            }
+
+        }
+        let toReturn = {};
+        if (useParsed == 0) {
+            toReturn =
+            {"triangles":
+                faces
+            ,"attributes":
+                [ // position
+                    vertices
+                , // colors
+                color
+                ]
+            }
+        } else {
+            normals = parsedNormals
+            toReturn =
+            {"triangles":
+                faces
+            ,"attributes":
+                [ // position
+                    parsedVertices
+                , // color
+                color
+                ]
+            }
+        }
+        // console.log("texCoords: ", parsedTex)
+        // console.log("useTexture = ", useTexture)
+        // console.log("vertices = ", vertices)
+        // console.log("post parse geom: ", toReturn)
+
+        return toReturn
+    }
+
+    var forward;
+    var right;
+    var eye;
+    var center;
+    var up;
+    var dx;
+    var dy;
+    var dz;
+    var wd;
+    var mainObj;
+    var isCube = 0;
+
+
+    function normalize2(vector) {
+        const length = Math.sqrt(vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2);
+        return [vector[0] / length, vector[1] / length, vector[2] / length];
+    }
+
+    function crossProduct2(a, b) {
+        return [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ];
+    }
+
+    function loadTexture(filename){
+        let img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = filename;
+        img.addEventListener('error', function() {
+            console.warn("Failed to load image."); // use non-texture shader if fails
+            useTexture = 0;
+        });
+        img.addEventListener('load', function() {
+            // Now that the image has loaded make copy it to the texture.
+            
+
+            // console.log(filename, " loaded successfully")
+            let slot = 0; // or a larger integer if this isn't the only texture
+            let texture = gl.createTexture();
+            gl.activeTexture(gl.TEXTURE0 + slot);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texImage2D(
+                gl.TEXTURE_2D, // destination slot
+                0, // the mipmap level this data provides; almost always 0
+                gl.RGBA, // how to store it in graphics memory
+                gl.RGBA, // how it is stored in the image object
+                gl.UNSIGNED_BYTE, // size of a single pixel-color in HTML
+                img, // source data
+            );
+            gl.generateMipmap(gl.TEXTURE_2D);
+            // console.log("loaded ", filename);
+            useTexture = 1;
+            });
+    }
+
+    var submitted = 0
+    var filePath
+    var firstTime = 1
+    var letsGo = 0;
+
+    document.getElementById('objUpload').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const objText = e.target.result;
+            // Parse the uploaded OBJ file.
+            letsGo = 1;
+            thing = parseOBJ(objText);
+            normOk = 1;
+            addNormals(thing);
+            window.geomA = setupGeomery(thing);
+            // Optionally, update your scene (e.g., reset eye/center, re-render, etc.)
+            console.log("User model loaded:", thing);
+            fillScreen(); // adjust viewport if needed
+        };
+        reader.readAsText(file);
+    });
+
+    /** Compile, link, set up geometry */
+    window.addEventListener('load', async (event) => {
+        // if (submitted === 1) {
+            window.gl = document.querySelector('canvas').getContext('webgl2',
+                // optional configuration object: see https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
+                {antialias: false, depth:true, preserveDrawingBuffer:true}
+            )
+            let vs = document.querySelector('#vert').textContent.trim()
+            let fs = document.querySelector('#frag').textContent.trim()
+            let fs2 = document.querySelector('#fragDef').textContent.trim()
+            window.program = compileShader(vs,fs)
+            window.programDef = compileShader(vs,fs2)
+            gl.enable(gl.DEPTH_TEST)
+
+            let cube3s = "z\nv -0.500000 -0.500000 0.500000 \nv -0.500000  0.500000 0.500000\nv  0.500000  0.500000 0.500000\nv  0.500000 -0.500000 0.500000\nv -0.500000 -0.500000  1.500000\nv -0.500000  0.500000  1.500000\nv  0.500000  0.500000  1.500000\nv  0.500000 -0.500000  1.500000\nvn  1.000000  0.000000  0.000000\nvn -1.000000  0.000000  0.000000\nvn  0.000000  1.000000  0.000000\nvn  0.000000 -1.000000  0.000000\nvn  0.000000  0.000000  1.000000\nvn  0.000000  0.000000 -1.000000\nf 3//1 7//1 8//1\nf 3//1 8//1 4//1\nf 1//2 5//2 6//2\nf 1//2 6//2 2//2\nf 7//3 3//3 2//3\nf 7//3 2//3 6//3\nf 4//4 8//4 5//4\nf 4//4 5//4 1//4\nf 8//5 7//5 6//5\nf 8//5 6//5 5//5\nf 3//6 4//6 1//6\nf 3//6 1//6 2//6\n"
+            let cube3s2 = "z\ny\nv -0.500000 -0.500000 -0.500000\n\nv -0.500000  0.500000 -0.500000\n\nv  0.500000  0.500000 -0.500000\n\nv  0.500000 -0.500000 -0.500000\n\nv -0.500000 -0.500000  0.500000\n\nv -0.500000  0.500000  0.500000\n\nv  0.500000  0.500000  0.500000\n\nv  0.500000 -0.500000  0.500000\n\nvn  1.000000  0.000000  0.000000\n\nvn -1.000000  0.000000  0.000000\n\nvn  0.000000  1.000000  0.000000\n\nvn  0.000000 -1.000000  0.000000\n\nvn  0.000000  0.000000  1.000000\n\nvn  0.000000  0.000000 -1.000000\n\nf 3//1 7//1 8//1\n\nf 3//1 8//1 4//1\n\nf 1//2 5//2 6//2\n\nf 1//2 6//2 2//2\n\nf 7//3 3//3 2//3\n\nf 7//3 2//3 6//3\n\nf 4//4 8//4 5//4\n\nf 4//4 5//4 1//4\n\nf 8//5 7//5 6//5\n\nf 8//5 6//5 5//5\n\nf 3//6 4//6 1//6\n\nf 3//6 1//6 2//6\n"
+            let cubeStr = "z\nv 1.000000 -1.000000 -1.000000\nv 1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 1.000000\nv -1.000000 -1.000000 -1.000000\nv 1.000000 1.000000 -0.999999\nv 0.999999 1.000000 1.000001\nv -1.000000 1.000000 1.000000\nv -1.000000 1.000000 -1.000000\nvt 1.000000 0.333333\nvt 1.000000 0.666667\nvt 0.666667 0.666667\nvt 0.666667 0.333333\nvt 0.666667 0.000000\nvt 0.000000 0.333333\nvt 0.000000 0.000000\nvt 0.333333 0.000000\nvt 0.333333 1.000000\nvt 0.000000 1.000000\nvt 0.000000 0.666667\nvt 0.333333 0.333333\nvt 0.333333 0.666667\nvt 1.000000 0.000000\nvn 0.000000 -1.000000 0.000000\nvn 0.000000 1.000000 0.000000\nvn 1.000000 0.000000 0.000000\nvn -0.000000 0.000000 1.000000\nvn -1.000000 -0.000000 -0.000000\nvn 0.000000 0.000000 -1.000000\nf 2/1/1 3/2/1 4/3/1\nf 8/1/2 7/4/2 6/5/2\nf 5/6/3 6/7/3 2/8/3\nf 6/8/4 7/5/4 3/4/4\nf 3/9/5 7/10/5 8/11/5\nf 1/12/6 4/13/6 8/11/6\nf 1/4/1 2/1/1 4/3/1\nf 5/14/2 8/1/2 6/5/2\nf 1/12/3 5/6/3 2/8/3\nf 2/12/4 6/8/4 3/4/4\nf 4/13/5 3/9/5 8/11/5\nf 5/6/6 1/12/6 8/11/6\n"
+            // thing = parseOBJ(cubeStr)
+            // thing = parseOBJ(cubeStr)
+            // og thing below 
+            // thing = parseOBJ("v -1 -1 -0.255987\nv 1  -1 -0.255987\nv 1 1 -0.255987\nv -1 1 -0.255987\nf 1 2 3\nf 4 3 1\n")
+            thing = parseOBJ("y\nv -0.75 -0.75 -0.5\nv 0.75  -0.75 -0.5\nv 0.75 0.75 -0.5\nv -0.75 0.75 -0.5\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3\nf 4 3 1\n")
+            addNormals(thing)
+            // thing2 = parseOBJ("v -1 -1 -1\nv 1  -1 -1\nv 1 1 -1\nv -1 1 -1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3\nf 4 3 1\n")
+            thing2 = parseOBJ("y\nv -0.75 -0.75 -0.5\nv 0.75  -0.75 -0.5\nv 0.75 0.75 -0.5\nv -0.75 0.75 -0.5\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3\nf 4 3 1\n")
+            // thing2 for testing
+            // thing2 = parseOBJ(subdividedCube2)
+            addNormals(thing2)
+            console.log("FLOOR")
+            console.log(thing2)
+            // console.log(thing)
+            window.geomA = setupGeomery(thing2)
+            window.geomB = setupGeomery(thing2)
+            blueCube = parseOBJ(cube3s2);
+            // blueCube = parseOBJ(subdividedCube);
+            addNormals(blueCube)
+            // console.log(blueCube)
+            // for (let i = 0; i < blueCube.attributes[0].length; i+=1) {
+            //     blueCube.attributes[0][i][2] += 1
+            // }
+            window.geomC = setupGeomery(blueCube)
+            console.log("HERRO")
+            console.log(blueCube)
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+            eye = [0,-2,0.25];
+            forward = [0, 0, -1];
+            up = [0, 1, 0];
+            center = [0, 0, 0]
+            
+            wd = 1;
+            dx = 0;
+            dy = 0;
+            dz = 0;
+            let crossP = crossProduct2(forward, up);
+            // console.log("Crossp = ", crossP)
+            right = normalize2(crossP);
+            // console.log("Loaded")
+            document.querySelector('#submit').addEventListener('click', event => {
+                
+                // let imagePath = document.getElementById('image_path').value;
+                // loadTexture(imagePath);
+                filePath = document.getElementById('file_path').value;
+                firstTime = 1;
+                letsGo = 1;
+                fetch(filePath)
+                    .then((res) => res.text())
+                    .then((text) => {
+                    // do something with "text"
+                        thing = parseOBJ(text)
+                        normOk = 1
+                        addNormals(thing)
+                        window.geomA = setupGeomery(thing)
+                        console.log(thing)
+                        fillScreen()
+                        window.addEventListener('resize', fillScreen)
+                    })
+                    .catch((e) => console.error(e));
+            });
+            requestAnimationFrame(tick)
+        // }
+    })
+    window.keysBeingPressed = {}
+    window.addEventListener('keydown', event => keysBeingPressed[event.key] = true)
+    window.addEventListener('keyup', event => keysBeingPressed[event.key] = false)
+    </script>
+</body>
+
+</html>
