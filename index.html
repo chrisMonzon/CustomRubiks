@@ -8,6 +8,7 @@
     <script src="wrapWebGL25.js"></script>
     <script src="math20.js"></script>
 
+    <!-- TO DO: fix normal colors of borders, fix centroid bug, fix teapot filetype handling -->
 
 <!-- The source code of a vertex shader directly in the HTML. The 'type=' command can have any value except "javascript" and just tells the browser not to try to run the code as javascript. -->
 <script id="vert" type="glsl">
@@ -124,7 +125,7 @@ void main() {
             vec4 texColor = texture(img_texture, vTexCoord);
             vec3 N = normalize(vnormal);
             vec3 L = normalize(lightdir);
-            float lambert = max(dot(N, L), 0.0);
+            float lambert = max(dot(N, L), 0.25);
             vec3 diffuse = lightcolor * lambert;
             float blinn = pow(max(dot(N, halfway), 0.0), 16.0); // alpha used to multiply spec light
             vec3 specular = lightcolor * blinn;
@@ -150,19 +151,9 @@ void main() {
                 ? (wFront*frontColor + wRight*rightColor + wLeft*leftColor + wTop*topColor + wBottom*bottomColor) / total
                 : vec3(1.0);
             
-            // Use the computed sideColor in place of color2.rgb.
-            // cube blue
-            //if  (color2.b == 1.0 && color2.g == 0.0) {
-            //    fragColor = vec4(color2.rgb * (diffuse) + specular, 0.8);
-            //}
-            // object blue
-            // xval < 0.5 && xval > -0.5 && zval < 0.5 && zval > -0.5 && (yval > -1.0 || yval == -1.0) && yval < -0.5
-            //if (zval < 0.5 && xval < 0.5 && xval > -0.5 && yval < 0.5 && yval > -0.5) { // 
-            //    fragColor = vec4(0.0, 0.0, (color2.rgb * (diffuse) + specular + 0.25).b, 1.0);
-            //} else {
-                // fragColor = vec4(0.0, 0.0, 1.0, 1.0);
-                fragColor = vec4(sideColor * diffuse + specular, 1.0);
-            //}
+            
+            fragColor = vec4(sideColor * diffuse + specular, 1.0);
+
             if  (color2.b == 1.0) {
                 fragColor = vec4(0.75, 0.75, 0.75, 1.0);
                 // fragColor = vec4(sideColor * diffuse + specular, 1.0);
@@ -295,6 +286,138 @@ var maxVert = 0;
 var normOk = 0;
 
 function addNormals(geom) {
+    // add norm only once after load
+    maxVert = 0;
+    if (normOk === 1) {
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            for (let j = 0; j < 3; j += 1) {
+                if (Math.abs(geom.attributes[0][i][j]) > Math.abs(maxVert) && geom.attributes[0][i][j] !== 0.0) {
+                    maxVert = geom.attributes[0][i][j];
+                }
+                if (geom.attributes[0][i][j] === -1.0 * maxVert && maxVert < 0.0) {
+                    maxVert = geom.attributes[0][i][j];
+                }
+            }
+            
+        }
+        normOk = 0;
+    }
+    let mult = 1.0 / maxVert
+    
+    // console.log("Max vert = ", maxVert)
+    if (maxVert !== 0) {
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            for (let j = 0; j < 3; j += 1) {
+                geom.attributes[0][i][j] /= maxVert;
+                if (maxVert - 1.0 >= 0.01) {
+                    geom.attributes[0][i][j] *= 1.5; 
+                }
+            }
+        }
+    }
+    let minX = geom.attributes[0][0][0];
+    let maxX = geom.attributes[0][0][0];
+    let minY = geom.attributes[0][0][1];
+    let maxY = geom.attributes[0][0][1];
+    let minZ = geom.attributes[0][0][2];
+    let maxZ = geom.attributes[0][0][2];
+    if (floorOrCube == 0) {
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            if (geom.attributes[0][i][0] < minX) {
+                minX = geom.attributes[0][i][0];
+            }
+            if (geom.attributes[0][i][0] > maxX) {
+                maxX = geom.attributes[0][i][0];
+            }
+            if (geom.attributes[0][i][1] < minY) {
+                minY = geom.attributes[0][i][1];
+            }
+            if (geom.attributes[0][i][1] > maxY) {
+                maxY = geom.attributes[0][i][1];
+            }
+            if (geom.attributes[0][i][2] < minZ) {
+                minZ = geom.attributes[0][i][2];
+            }
+            if (geom.attributes[0][i][2] > maxZ) {
+                maxZ = geom.attributes[0][i][2];
+            }
+        }
+        let extremeVals = [maxX - minX, maxY - minY, maxZ - minZ];
+        let maxVal = 0;
+        for (let i = 0; i < extremeVals.length; i += 1) {
+            let curr = extremeVals[i];
+            if (Math.abs(curr) > Math.abs(maxVal)) {
+                maxVal = curr;
+            }
+        }
+        // console.log("MaxVAL = ", maxVal)
+        let scalar = 1.0 / maxVal;
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            geom.attributes[0][i][0] *= scalar;
+            geom.attributes[0][i][1] *= scalar;
+            geom.attributes[0][i][2] *= scalar;
+        }
+        
+    }
+    if (firstTime == 1) {
+        firstTime = 0
+        minZ = 1000;
+        let center2 = [0, 0, 0];
+        let vertexCount2 = 0;
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+                center2[0] += geom.attributes[0][i][0];
+                center2[1] += geom.attributes[0][i][1];
+                center2[2] += geom.attributes[0][i][2];
+                vertexCount2 += 1;
+        }
+        center2[0] /= vertexCount2;
+        center2[1] /= vertexCount2;
+        center2[2] /= vertexCount2;
+
+        for (let i = 0; i < geom.attributes[0].length; i += 1) {
+            geom.attributes[0][i][0] -= center2[0];
+            geom.attributes[0][i][1] -= center2[1];
+            geom.attributes[0][i][2] -= center2[2];
+        }
+        
+    }
+   
+    center = [0, 0, 0]
+    for (let i = 0; i < geom.attributes[0].length; i += 1) {
+        for (let j = 0; j < 2; j += 1) {
+            center[j] += geom.attributes[0][i][j];
+        }
+    }
+    center[0] /= geom.attributes[0].length;
+    center[1] /= geom.attributes[0].length;
+    center[2] /= geom.attributes[0].length;
+    for (let i = 0; i < geom.attributes[0].length; i += 1) {
+        geom.attributes[0][i][0] -= center[0];
+        geom.attributes[0][i][1] -= center[1];
+        geom.attributes[0][i][2] -= center[2];
+    }
+    console.log(" old geom: ", geom)
+    console.log("FlooroRCUBe = ", floorOrCube)
+    if (floorOrCube == 0 && firstTime == 0) {
+        firstTime = -1
+        // console.log("I SHOULD BE HEAR!", geom)
+        
+        // geom = partitionOBJ(geom, 0, 0.0)[0]
+        // // console.log(" new geom: ", geom)
+        // while (geom.attributes[1].length < geom.attributes[0].length) {
+        //     geom.attributes[1].push([1.0, 1.0, 0.9])
+        // }
+        // geom = partitionOBJ(geom, 1, 0.0)
+        // // console.log(" new geom: ", geom)
+        // while (geom.attributes[1].length < geom.attributes[0].length) {
+        //     geom.attributes[1].push([1.0, 1.0, 0.9])
+        // }
+        // geom = partitionOBJ(geom, 2, 0.0)
+        // // console.log(" new geom: ", geom)
+        // while (geom.attributes[1].length < geom.attributes[0].length) {
+        //     geom.attributes[1].push([1.0, 1.0, 0.9])
+        // }
+    }
     if (calcNormals === 1) {
         let ni = geom.attributes.length
         geom.attributes.push([])
@@ -326,14 +449,19 @@ function addNormals(geom) {
             geom.attributes[ni][i] = normalize(geom.attributes[ni][i])
         }
     } else if (calcNormals === 2) {
-        // console.log("pushing given normals 2")
+        console.log("pushing given normals 2")
         for(let i = 0; i < parsedNormals.length; i+=1) {
             normals[i] = normalize(parsedNormals[i])
         }
         geom.attributes.push(parsedNormals)
+        let i = 0;
+        while (normals.length < geom.attributes[0].length) {
+            normals.push(normals[i])
+            i += 1
+        }
     } else {
         
-        // console.log("pushing given normals")
+        console.log("pushing given normals")
         for(let i = 0; i < normals.length; i+=1) {
             normals[i] = normalize(normals[i])
         }
@@ -385,114 +513,10 @@ function addNormals(geom) {
         }
         geom.attributes.push(texCoords)
     }
-    // add norm only once after load
-    maxVert = 0;
-    if (normOk === 1) {
-        for (let i = 0; i < geom.attributes[0].length; i += 1) {
-            for (let j = 0; j < 3; j += 1) {
-                if (Math.abs(geom.attributes[0][i][j]) > Math.abs(maxVert) && geom.attributes[0][i][j] !== 0.0) {
-                    maxVert = geom.attributes[0][i][j];
-                }
-                if (geom.attributes[0][i][j] === -1.0 * maxVert && maxVert < 0.0) {
-                    maxVert = geom.attributes[0][i][j];
-                }
-            }
-            
-        }
-        normOk = 0;
-    }
-    let mult = 1.0 / maxVert
     
-    console.log("Max vert = ", maxVert)
-    if (maxVert !== 0) {
-        for (let i = 0; i < geom.attributes[0].length; i += 1) {
-            for (let j = 0; j < 3; j += 1) {
-                geom.attributes[0][i][j] /= maxVert;
-                if (maxVert - 1.0 >= 0.01) {
-                    geom.attributes[0][i][j] *= 1.5; 
-                }
-            }
-        }
-    }
-    let minX = geom.attributes[0][0][0];
-    let maxX = geom.attributes[0][0][0];
-    let minY = geom.attributes[0][0][1];
-    let maxY = geom.attributes[0][0][1];
-    let minZ = geom.attributes[0][0][2];
-    let maxZ = geom.attributes[0][0][2];
-    if (floorOrCube == 0) {
-        for (let i = 0; i < geom.attributes[0].length; i += 1) {
-            if (geom.attributes[0][i][0] < minX) {
-                minX = geom.attributes[0][i][0];
-            }
-            if (geom.attributes[0][i][0] > maxX) {
-                maxX = geom.attributes[0][i][0];
-            }
-            if (geom.attributes[0][i][1] < minY) {
-                minY = geom.attributes[0][i][1];
-            }
-            if (geom.attributes[0][i][1] > maxY) {
-                maxY = geom.attributes[0][i][1];
-            }
-            if (geom.attributes[0][i][2] < minZ) {
-                minZ = geom.attributes[0][i][2];
-            }
-            if (geom.attributes[0][i][2] > maxZ) {
-                maxZ = geom.attributes[0][i][2];
-            }
-        }
-        let extremeVals = [maxX - minX, maxY - minY, maxZ - minZ];
-        let maxVal = 0;
-        for (let i = 0; i < extremeVals.length; i += 1) {
-            let curr = extremeVals[i];
-            if (Math.abs(curr) > Math.abs(maxVal)) {
-                maxVal = curr;
-            }
-        }
-        console.log("MaxVAL = ", maxVal)
-        let scalar = 1.0 / maxVal;
-        for (let i = 0; i < geom.attributes[0].length; i += 1) {
-            geom.attributes[0][i][0] *= scalar;
-            geom.attributes[0][i][1] *= scalar;
-            geom.attributes[0][i][2] *= scalar;
-        }
-        
-    }
-    if (firstTime == 1) {
-        firstTime = 0
-        minZ = 1000;
-        let center2 = [0, 0, 0];
-        let vertexCount2 = 0;
-        for (let i = 0; i < geom.attributes[0].length; i += 1) {
-                center2[0] += geom.attributes[0][i][0];
-                center2[1] += geom.attributes[0][i][1];
-                center2[2] += geom.attributes[0][i][2];
-                vertexCount2 += 1;
-        }
-        center2[0] /= vertexCount2;
-        center2[1] /= vertexCount2;
-        center2[2] /= vertexCount2;
 
-        for (let i = 0; i < geom.attributes[0].length; i += 1) {
-            geom.attributes[0][i][0] -= center2[0];
-            geom.attributes[0][i][1] -= center2[1];
-            geom.attributes[0][i][2] -= center2[2];
-        }
-    }
-    center = [0, 0]
-    for (let i = 0; i < geom.attributes[0].length; i += 1) {
-        for (let j = 0; j < 2; j += 1) {
-            center[j] += geom.attributes[0][i][j];
-        }
-    }
-    center[0] /= geom.attributes[0].length;
-    center[1] /= geom.attributes[0].length;
-    for (let i = 0; i < geom.attributes[0].length; i += 1) {
-        geom.attributes[0][i][0] -= center[0];
-        geom.attributes[0][i][1] -= center[1];
-    }
-    // console.log("addnormals geom post norm:")
-    // console.log(geom)
+    console.log("addnormals geom post norm:")
+    console.log(geom)
 }
 </script>
 
@@ -508,15 +532,28 @@ function addNormals(geom) {
     #glCanvas {
       display: block;
       margin: 20px auto; /* centers the canvas horizontally with some top/bottom margin */
-      width: 800px;   /* set desired width */
-      height: 500px;  /* set desired height */
+      width: 100vh;   /* set desired width */
+      height: 62.5vh;  /* set desired height */
       /* Optionally, add a border or other styles: */
       border: 2px solid #000;
+      border-radius: 40px;
     }
   </style>
 </head>
 <body>
-    <img src="rubixcube.png" alt="rubik's cube icon" style="width:50px;height:50px;">
+    <img src="objload/rubixcube.png" alt="rubik's cube icon">
+    <p>BETA 0.5.1</p>
+    <p style="font-size:8px;">hotkeys:</p>
+    <ul style="font-size:6px;">
+        <li>u: downward rotation wrt x-axis</li>
+        <li>j: rightward rotation wrt z-axis</li>
+        <li>i: left half</li>
+        <li>o: right half</li>
+        <li>k: top half</li>
+        <li>l: bottom half</li>
+        <li>n: back half</li>
+        <li>m: front half</li>
+    </ul>
     <form class="controls" action="javascript:void(0);">
         <label>Upload OBJ file:
           <input id="objUpload" type="file" accept=".obj" />
@@ -611,6 +648,146 @@ function addNormals(geom) {
         // console.log("final = ", final)
         return final;
     }
+
+
+    function intersectEdgeWithPlane(v1, v2, planeDim, planeCoord) {
+        // console.log("v2 = ", v2, "v1 = ", v1)
+        let d = v2[planeDim] - v1[planeDim];
+        let t = (planeCoord - v1[planeDim]) / d;
+        return [
+            v1[0] + t * (v2[0] - v1[0]),
+            v1[1] + t * (v2[1] - v1[1]),
+            v1[2] + t * (v2[2] - v1[2])
+        ];
+    }
+
+    function offsetPoint(point, planeDim, offset) {
+        let newPoint = point.slice(); // copy the array
+        newPoint[planeDim] += offset;
+        return newPoint;
+    }
+
+    function partitionOBJ(geom, planeDim, planeCoord) {
+        let vertices = geom.attributes[0]
+        let gapVal = 0.0078125 / 4.0
+        // console.log("tirCount = ", geom.triangles.length)
+        let count = geom.triangles.length
+        
+        // for (let i = 0; i < geom.attributes[0].length; i += 1) {
+        //     if (geom.attributes[0][i][planeDim] >= planeCoord) {
+        //         for (let j = 0; j < 3; j += 1) {
+        //             if (j == planeDim) {
+        //                 geom.attributes[0][i][j] += 20.0 * gapVal
+        //             }
+        //         }
+        //     } else {
+        //         for (let j = 0; j < 3; j += 1) {
+        //             if (j == planeDim) {
+        //                 geom.attributes[0][i][j] -= 20.0 * gapVal
+        //             }
+        //         }
+        //     }
+        // }
+        for (let i = 0; i < count; i += 1) {
+        // for (let i = geom.triangles.length - 1; i >= 0; i -= 1) {
+        // for (let i = 0; i < 10; i += 1) {
+            let tri = geom.triangles[i]
+            let posVerts = []
+            let negVerts = []
+            let triangleToRemoveIndex = i;
+            for (let jk = 0; jk < 3; jk += 1) {
+                // console.log("CurrVert = ", tri[jk], "j = ", jk)
+                if (tri[jk] == -1) {
+                    break
+                }
+                if (vertices[tri[jk]][planeDim] >= planeCoord) { 
+                    // geom.triangles.splice(i, 1);
+                    // break
+                    posVerts.push(vertices[tri[jk]])
+                } 
+                else {
+                    negVerts.push(vertices[tri[jk]])
+                }
+            }
+            // console.log("pv = ", posVerts, "nv = ", negVerts)
+            // console.log("pvL = ", posVerts.length, "nvL = ", negVerts.length)
+            
+            if (!(posVerts.length === 3 || negVerts.length === 3)) {
+                // determine the coordinates of where the plane and the triangle intersect
+                // determine 2 points on both sides of the plane offset by 0.01
+                let newTriIndex = geom.triangles.length
+                let newVertIdx = geom.attributes[0].length
+                if (posVerts.length > negVerts.length) { // more pos than neg
+                    // console.log("fist case")
+                    let intPointA = intersectEdgeWithPlane(posVerts[0], negVerts[0], planeDim, planeCoord)
+                    let intPointB = intersectEdgeWithPlane(posVerts[1], negVerts[0], planeDim, planeCoord)
+                    // console.log("int points: ", intPointA, " ", intPointB)
+                    // create offset points from the intersection to create gaps in the middle of the object
+                    let newPointA = offsetPoint(intPointA, planeDim, gapVal)
+                    let newPointB = offsetPoint(intPointB, planeDim, gapVal)
+                    let newPointC = offsetPoint(intPointA, planeDim, -gapVal)
+                    let newPointD = offsetPoint(intPointB, planeDim, -gapVal)
+                    // console.log("A, B, C, D: ", newPointA, newPointB, newPointC, newPointD)
+                    // add offset vertices from intersection to geometry json
+                    geom.attributes[0].push(newPointA)
+                    geom.attributes[0].push(newPointB)
+                    geom.attributes[0].push(newPointC)
+                    geom.attributes[0].push(newPointD)
+                    // remove the triangle that we split from the geometry
+                    let posVerts0Idx = geom.attributes[0].indexOf(posVerts[0])
+                    let posVerts1Idx = geom.attributes[0].indexOf(posVerts[1])
+                    let negVerts0Idx = geom.attributes[0].indexOf(negVerts[0])
+                    geom.triangles[triangleToRemoveIndex] = [newVertIdx, newVertIdx + 1, posVerts0Idx]
+                    geom.triangles.push([newVertIdx + 1, posVerts0Idx, posVerts1Idx])
+                    geom.triangles.push([newVertIdx + 2, newVertIdx + 3, negVerts0Idx])
+                } else {
+                    // console.log("second case")
+                    let intPointA = intersectEdgeWithPlane(negVerts[0], posVerts[0], planeDim, planeCoord)
+                    let intPointB = intersectEdgeWithPlane(negVerts[1], posVerts[0], planeDim, planeCoord)
+                    // create offset points from the intersection to create gaps in the middle of the object
+                    let newPointA = offsetPoint(intPointA, planeDim, -gapVal)
+                    let newPointB = offsetPoint(intPointB, planeDim, -gapVal)
+                    let newPointC = offsetPoint(intPointA, planeDim, gapVal)
+                    let newPointD = offsetPoint(intPointB, planeDim, gapVal)
+                    // add offset vertices from intersection to geometry json
+                    geom.attributes[0].push(newPointA)
+                    geom.attributes[0].push(newPointB)
+                    geom.attributes[0].push(newPointC)
+                    geom.attributes[0].push(newPointD)
+                    // remove the triangle that we split from the geometry
+                    let negVerts0Idx = geom.attributes[0].indexOf(negVerts[0])
+                    let negVerts1Idx = geom.attributes[0].indexOf(negVerts[1])
+                    let posVerts0Idx = geom.attributes[0].indexOf(posVerts[0])
+                    geom.triangles[triangleToRemoveIndex] = [newVertIdx, newVertIdx + 1, negVerts0Idx]
+                    geom.triangles.push([newVertIdx + 1, negVerts0Idx, negVerts1Idx])
+                    geom.triangles.push([newVertIdx + 2, newVertIdx + 3, posVerts0Idx])
+                }
+            }
+        }
+        let posFaces = []
+        let negFaces = []
+        for (let i = geom.triangles.length - 1; i >= 0; i -= 1) {
+            let tri = geom.triangles[i]
+            for (let jk = 0; jk < 3; jk += 1) {
+                // console.log("CurrVert = ", tri[jk], "j = ", jk)
+                if (vertices[tri[jk]][planeDim] < planeCoord) { 
+                    // geom.triangles.splice(i, 1);
+                    posFaces.push(geom.triangles[i])
+                    break
+                } 
+                else {
+                    negFaces.push(geom.triangles[i])
+                    break
+                }
+            }
+        }
+        // return geom
+        posGeom = {"triangles" : posFaces, "attributes" : geom.attributes}
+        negGeom = {"triangles" : negFaces, "attributes" : geom.attributes}
+        console.log("finished partitioning!!", posGeom, negGeom)
+        return [posGeom, negGeom]
+    }
+
     function computeCentroid(vertices) {
         let center = [0, 0, 0];
         let count = 0;
@@ -641,14 +818,17 @@ function addNormals(geom) {
         let topVerts = [];
         
         var center2; 
-        if (mode == "top" || mode == "bottom") {
+        // let valid = ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) || (mode == "left" && thing.attributes[0][i][0] < 0.0) || (mode == "right" && thing.attributes[0][i][0] > 0.0))
+        // if (mode == "top" || mode == "bottom") {
             for (let i = 0; i < thing.attributes[0].length; i++) {
-                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) ) {
+                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0)
+                 || (mode == "left" && thing.attributes[0][i][0] < 0.0) || (mode == "right" && thing.attributes[0][i][0] > 0.0)
+                 || (mode == "sideA" && thing.attributes[0][i][1] >= 0.0) || (mode == "sideB" && thing.attributes[0][i][1] < 0.0)) {
                     topVerts.push(thing.attributes[0][i]);
                 }
             }
             center2 = computeCentroid(topVerts);
-        }
+        // }
         for (let i = 0; i < thing.attributes[0].length; i += 1) {
             xC = thing.attributes[0][i][0]
             yC = thing.attributes[0][i][1]
@@ -660,39 +840,49 @@ function addNormals(geom) {
                     thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
                 }
             }  else if (mode == "right") {
-                if (xC > 0.0) {
+                if (xC >= 0.0) {
                     thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
                 }
-            }
-            else if (mode == "top") {
-                if (zC > 0.0) {
+            } else if (mode == "top") {
+                if (zC >= 0.0) {
                     thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
                 }
-            }
-
-            else if (mode == "bottom") {
+            } else if (mode == "bottom") {
                 if (zC < 0.0) {
                     thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
                 }
             }
+            else if (mode == "sideA") {
+                if (yC >= 0.0) {
+                    thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
+                }
+            } else if (mode == "sideB") {
+                if (yC < 0.0) {
+                    thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
+                }
+            }
         }
-        if (mode == "top" || mode == "bottom" ) {
+        // if (mode == "top" || mode == "bottom" ) {
             let topVerts2 = []
             for (let i = 0; i < thing.attributes[0].length; i++) {
-                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) ) {
+                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) 
+                || (mode == "left" && thing.attributes[0][i][0] < 0.0) || (mode == "right" && thing.attributes[0][i][0] > 0.0)
+                || (mode == "sideA" && thing.attributes[0][i][1] >= 0.0) || (mode == "sideB" && thing.attributes[0][i][1] < 0.0)) {
                     topVerts2.push(thing.attributes[0][i]);
                 }
             }
             let center3 = computeCentroid(topVerts2);
             let toAdd = [center2[0] - center3[0], center2[1] - center3[1], center2[2] - center3[2],]
             for (let i = 0; i < thing.attributes[0].length; i += 1) {
-                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) ) {
+                if ((mode == "top" && thing.attributes[0][i][2] > 0.0) || (mode == "bottom" && thing.attributes[0][i][2] < 0.0) 
+                || (mode == "left" && thing.attributes[0][i][0] < 0.0) || (mode == "right" && thing.attributes[0][i][0] > 0.0)
+                || (mode == "sideA" && thing.attributes[0][i][1] >= 0.0) || (mode == "sideB" && thing.attributes[0][i][1] < 0.0)) {
                 thing.attributes[0][i][0] += toAdd[0]
                 thing.attributes[0][i][1] += toAdd[1]
                 thing.attributes[0][i][2] += toAdd[2]
                 }
             }
-        }
+        // }
     }
 
     /** Draw one frame */
@@ -704,7 +894,7 @@ function addNormals(geom) {
         gl.useProgram(programDef)
         
         let v = m4view(eye, [0,0,0], [0,1,1])
-        let vScalar = 1.75
+        let vScalar = 2.25
         v = m4mul(v, m4scale(vScalar,vScalar,vScalar));
         gl.uniformMatrix4fv(programDef.uniforms.mv, false, v) // , m4mul(v,m)
         gl.uniformMatrix4fv(programDef.uniforms.p, false, p)
@@ -725,16 +915,26 @@ function addNormals(geom) {
         // let m = m4rotY(0) 
         // let sun =  m4mul(m, m4rotX(-1.5708) , m4scale(.2,.2,.2)) // sun
         // let sun =  m4mul(m4trans(0, 0, 0), m, m4rotX(1.5708))
-        let sun =  m4mul(m, m4rotZ(dz), m4rotX(dy),m4scale(wd, wd, wd))
+        let sun =  m4mul(m, m4rotZ(dz), m4rotX(dy),m4scale(wd, wd, wd),m4trans(pd,0,0))
         k = 1
 
         // PLANE:
         gl.bindVertexArray(geomB.vao)
-        k = 1
+        k = 2
         gl.uniformMatrix4fv(programDef.uniforms.mv, false, m4mul(v,sun, m4scale(k,k,k)))
         gl.drawElements(geomB.mode, geomB.count, geomB.type, 0)
 
         gl.bindVertexArray(geomC.vao)
+
+        // let lineIndices = []; // for wireframe rendering
+        // for (let tri of thing.triangles) {
+        // // Add each edge of the triangle.
+        // lineIndices.push(tri[0], tri[1]);
+        // lineIndices.push(tri[1], tri[2]);
+        // lineIndices.push(tri[2], tri[0]);
+        // }
+        // Create buffer for lineIndices and then draw with:
+        // gl.drawElements(gl.LINES, lineIndices.length, gl.UNSIGNED_SHORT, 0);
 
         //CUBE:
         // gl.enable(gl.BLEND);
@@ -757,6 +957,7 @@ function addNormals(geom) {
         gl.bindVertexArray(geomA.vao)
         gl.uniformMatrix4fv(programDef.uniforms.mv, false, m4mul(v,sun, m4scale(k,k,k)))
         gl.drawElements(geomA.mode, geomA.count, geomA.type, 0)
+        
             
     }
     
@@ -814,13 +1015,24 @@ function addNormals(geom) {
         if (keysBeingPressed['i']) {
             // wd -= 0.005
             let ax = right
-            ax = [1, 0, 0]
+            // ax = [1, 0, 0]
             // if (rightFlag === -1.0) {
             //     ax = up
             // }
+
+            a = partitionOBJ(thing, 0, 0.0)
+            thing.triangles = a[0].triangles
+            // console.log(" new geom: ", geom)
+            while (thing.attributes[1].length < thing.attributes[0].length) {
+                thing.attributes[1].push([1.0, 1.0, 0.9])
+            }
             left(ax, Math.PI/2.0, "left")
+            for (let i = 0; i < a[1].triangles.length; i += 1) {
+                thing.triangles.push(a[1].triangles[i])
+            }
             // console.log("new geom: ", thing)
             addNormals(thing)
+
             window.geomA = setupGeomery(thing)
             thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
             fillScreen()
@@ -830,11 +1042,19 @@ function addNormals(geom) {
         } 
         if (keysBeingPressed['o']) {
             let ax = right
-            ax = [1, 0, 0]
+            // ax = [1, 0, 0]
             // if (rightFlag === -1.0) {
             //     ax = up
             // }
+            a = partitionOBJ(thing, 0, 0.0)
+            thing.triangles = a[0].triangles
+            while (thing.attributes[1].length < thing.attributes[0].length) {
+                thing.attributes[1].push([1.0, 1.0, 0.9])
+            }
             left(ax, Math.PI/2.0, "right")
+            for (let i = 0; i < a[1].triangles.length; i += 1) {
+                thing.triangles.push(a[1].triangles[i])
+            }
             addNormals(thing)
             window.geomA = setupGeomery(thing)
             thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
@@ -846,7 +1066,15 @@ function addNormals(geom) {
             // if (rightFlag === -1.0) {
             //     ax = right
             // }
+            a = partitionOBJ(thing, 2, 0.0)
+            thing.triangles = a[0].triangles
+            while (thing.attributes[1].length < thing.attributes[0].length) {
+                thing.attributes[1].push([1.0, 1.0, 0.9])
+            }
             left(forward, Math.PI/2.0, "top")
+            for (let i = 0; i < a[1].triangles.length; i += 1) {
+                thing.triangles.push(a[1].triangles[i])
+            }
             addNormals(thing)
             window.geomA = setupGeomery(thing)
             thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
@@ -855,7 +1083,52 @@ function addNormals(geom) {
         } 
         if (keysBeingPressed['l']) {
             let ax = right
+            a = partitionOBJ(thing, 2, 0.0)
+            thing.triangles = a[0].triangles
+            while (thing.attributes[1].length < thing.attributes[0].length) {
+                thing.attributes[1].push([1.0, 1.0, 0.9])
+            }
             left(forward, Math.PI/2.0, "bottom")
+            for (let i = 0; i < a[1].triangles.length; i += 1) {
+                thing.triangles.push(a[1].triangles[i])
+            }
+            addNormals(thing)
+            window.geomA = setupGeomery(thing)
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+        } 
+        if (keysBeingPressed['n']) {
+            let ax = right
+            // if (rightFlag === -1.0) {
+            //     ax = right
+            // }
+            a = partitionOBJ(thing, 1, 0.0)
+            thing.triangles = a[0].triangles
+            while (thing.attributes[1].length < thing.attributes[0].length) {
+                thing.attributes[1].push([1.0, 1.0, 0.9])
+            }
+            left(up, Math.PI/2.0, "sideA")
+            for (let i = 0; i < a[1].triangles.length; i += 1) {
+                thing.triangles.push(a[1].triangles[i])
+            }
+            addNormals(thing)
+            window.geomA = setupGeomery(thing)
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            fillScreen()
+            window.addEventListener('resize', fillScreen)
+        } 
+        if (keysBeingPressed['m']) {
+            let ax = right
+            a = partitionOBJ(thing, 1, 0.0)
+            thing.triangles = a[0].triangles
+            while (thing.attributes[1].length < thing.attributes[0].length) {
+                thing.attributes[1].push([1.0, 1.0, 0.9])
+            }
+            left(up, Math.PI/2.0, "sideB")
+            for (let i = 0; i < a[1].triangles.length; i += 1) {
+                thing.triangles.push(a[1].triangles[i])
+            }
             addNormals(thing)
             window.geomA = setupGeomery(thing)
             thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
@@ -864,10 +1137,12 @@ function addNormals(geom) {
         } 
         }
         if (keysBeingPressed['d']) {
+            // pd += 0.005
             eye = [eye[0] + 0.02 * right[0], eye[1] + 0.02 * right[1], eye[2] + 0.02 * right[2]]
             center = [center[0] + 0.02 * right[0], center[1] + 0.02 * right[1], center[2] + 0.02 * right[2]]
         } 
         if (keysBeingPressed['a']) {
+            // pd -= 0.005
             eye = [eye[0] - 0.02 * right[0], eye[1] - 0.02 * right[1], eye[2] - 0.02 * right[2]]
             center = [center[0] - 0.02 * right[0], center[1] - 0.02 * right[1], center[2] - 0.02 * right[2]]
         } 
@@ -1147,6 +1422,7 @@ function addNormals(geom) {
     var dy;
     var dz;
     var wd;
+    var pd;
     var mainObj;
     var isCube = 0;
 
@@ -1213,6 +1489,8 @@ function addNormals(geom) {
             // Parse the uploaded OBJ file.
             letsGo = 1;
             thing = parseOBJ(objText);
+            console.log("thing = ", thing)
+            firstTime = 1;
             normOk = 1;
             addNormals(thing);
             window.geomA = setupGeomery(thing);
@@ -1244,7 +1522,7 @@ function addNormals(geom) {
             // thing = parseOBJ(cubeStr)
             // og thing below 
             // thing = parseOBJ("v -1 -1 -0.255987\nv 1  -1 -0.255987\nv 1 1 -0.255987\nv -1 1 -0.255987\nf 1 2 3\nf 4 3 1\n")
-            thing = parseOBJ("y\nv -0.75 -0.75 -0.5\nv 0.75  -0.75 -0.5\nv 0.75 0.75 -0.5\nv -0.75 0.75 -0.5\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3\nf 4 3 1\n")
+            thing = parseOBJ("y\nv 0 0 0\nv 0 0 0 \nv 0 0 0\nv 0 0 0\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3\nf 4 3 1\n")
             addNormals(thing)
             // thing2 = parseOBJ("v -1 -1 -1\nv 1  -1 -1\nv 1 1 -1\nv -1 1 -1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3\nf 4 3 1\n")
             thing2 = parseOBJ("y\nv -0.75 -0.75 -0.5\nv 0.75  -0.75 -0.5\nv 0.75 0.75 -0.5\nv -0.75 0.75 -0.5\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3\nf 4 3 1\n")
@@ -1254,7 +1532,7 @@ function addNormals(geom) {
             console.log("FLOOR")
             console.log(thing2)
             // console.log(thing)
-            window.geomA = setupGeomery(thing2)
+            window.geomA = setupGeomery(thing)
             window.geomB = setupGeomery(thing2)
             blueCube = parseOBJ(cube3s2);
             // blueCube = parseOBJ(subdividedCube);
@@ -1268,12 +1546,13 @@ function addNormals(geom) {
             console.log(blueCube)
             fillScreen()
             window.addEventListener('resize', fillScreen)
-            eye = [0,-2,0.25];
+            eye = [0,-2,0.5];
             forward = [0, 0, -1];
             up = [0, 1, 0];
             center = [0, 0, 0]
             
             wd = 1;
+            pd = 0;
             dx = 0;
             dy = 0;
             dz = 0;
@@ -1312,3 +1591,4 @@ function addNormals(geom) {
 </body>
 
 </html>
+
