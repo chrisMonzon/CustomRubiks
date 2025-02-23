@@ -1102,35 +1102,42 @@ function addNormals(geom) {
         let ax = right;
         let planeNum = -1;
         var rotMode;
+        var cheat;
         var rotSign = 0;
         if (val == 0) {
             ax = forward
             planeNum = 2;
             rotMode = "top"
+            cheat = "[U] "
             rotSign = 1.0
         } else if (val == 1) {
             ax = forward
             planeNum = 2;
             rotSign = -1.0
+            cheat = "[D] "
             rotMode = "bottom"
         } else if (val == 2) {
             ax = up
             planeNum = 1;
+            cheat = "[B] "
             rotMode = "back"
             rotSign = 1.0
         } else if (val == 3) {
             ax = up
             planeNum = 1;
+            cheat = "[F] "
             rotMode = "front"
             rotSign = -1.0
         } else if (val == 4) {
             planeNum = 0;
             rotMode = "left"
+            cheat = "[L] "
             rotSign = -1.0
         } else if (val == 5) {
             
             planeNum = 0;
             rotMode = "right"
+            cheat = "[R] "
             rotSign = 1.0
         } 
         let part = partitionOBJ(thing, planeNum, kk)
@@ -1147,7 +1154,7 @@ function addNormals(geom) {
         thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
         fillScreen()
         window.addEventListener('resize', fillScreen)
-        return rotMode;
+        return cheat + rotMode;
     }
 
     function scramble() {
