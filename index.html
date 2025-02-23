@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <title>Custom Rubik's</title>
     <link rel="icon" href="/rubixcube.png">
-    <script src="wrapWebGL25.js"></script>
     <script src="math20.js"></script>
 
     <!-- TO DO: fix normal colors of borders, fix centroid bug, fix teapot filetype handling -->
@@ -535,7 +534,7 @@ function addNormals(geom) {
     li {
         margin: 10px 0;
     }
-    
+
     .overlay {
         position: absolute; 
         top: 0; 
@@ -548,6 +547,7 @@ function addNormals(geom) {
     }
 
     a {
+        text-decoration: none;
         color: rgba(250, 198, 66, 0.926);
         font-size:10px;
         margin:2px;
@@ -585,6 +585,8 @@ function addNormals(geom) {
         </label>
         <input id="submit" type="submit" value="Load" />
       </form>
+      <button id="scrambleButton" style="margin-top: 10px;">Scramble Cube</button>
+
       <br>
     <!-- <form class="controls" action="javascript:void(0);"> -->
         
@@ -965,7 +967,7 @@ function addNormals(geom) {
         for (let i = 0; i < thing.attributes[0].length; i++) {
             if ((mode == "top" && thing.attributes[0][i][2] > planeCoord) || (mode == "bottom" && thing.attributes[0][i][2] < planeCoord)
                 || (mode == "left" && thing.attributes[0][i][0] < planeCoord) || (mode == "right" && thing.attributes[0][i][0] > planeCoord)
-                || (mode == "sideA" && thing.attributes[0][i][1] >= planeCoord) || (mode == "sideB" && thing.attributes[0][i][1] < planeCoord)) {
+                || (mode == "back" && thing.attributes[0][i][1] >= planeCoord) || (mode == "front" && thing.attributes[0][i][1] < planeCoord)) {
                 topVerts.push(thing.attributes[0][i]);
             }
         }
@@ -996,11 +998,11 @@ function addNormals(geom) {
                     thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
                 }
             }
-            else if (mode == "sideA") {
+            else if (mode == "back") {
                 if (yC >= planeCoord) {
                     thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
                 }
-            } else if (mode == "sideB") {
+            } else if (mode == "front") {
                 if (yC < planeCoord) {
                     thing.attributes[0][i] = multiplyMatrixByVector(rotate2(degrees, axis), thing.attributes[0][i]);
                 }
@@ -1011,7 +1013,7 @@ function addNormals(geom) {
         for (let i = 0; i < thing.attributes[0].length; i++) {
             if ((mode == "top" && thing.attributes[0][i][2] > planeCoord) || (mode == "bottom" && thing.attributes[0][i][2] < planeCoord) 
             || (mode == "left" && thing.attributes[0][i][0] < planeCoord) || (mode == "right" && thing.attributes[0][i][0] > planeCoord)
-            || (mode == "sideA" && thing.attributes[0][i][1] >= planeCoord) || (mode == "sideB" && thing.attributes[0][i][1] < planeCoord)) {
+            || (mode == "back" && thing.attributes[0][i][1] >= planeCoord) || (mode == "front" && thing.attributes[0][i][1] < planeCoord)) {
                 topVerts2.push(thing.attributes[0][i]);
             }
             
@@ -1094,10 +1096,70 @@ function addNormals(geom) {
     var cubeDim = 2
     var sign = 1;
 
-    function scramble() {
-
+    function rotateHalf(val) {
+        let kk = cubeDim == 3 ? 0.05 : 0.0;
+        // let val = 0;
+        let ax = right;
+        let planeNum = -1;
+        var rotMode;
+        var rotSign = 0;
+        if (val == 0) {
+            ax = forward
+            planeNum = 2;
+            rotMode = "top"
+            rotSign = 1.0
+        } else if (val == 1) {
+            ax = forward
+            planeNum = 2;
+            rotSign = -1.0
+            rotMode = "bottom"
+        } else if (val == 2) {
+            ax = up
+            planeNum = 1;
+            rotMode = "back"
+            rotSign = 1.0
+        } else if (val == 3) {
+            ax = up
+            planeNum = 1;
+            rotMode = "front"
+            rotSign = -1.0
+        } else if (val == 4) {
+            planeNum = 0;
+            rotMode = "left"
+            rotSign = -1.0
+        } else if (val == 5) {
+            
+            planeNum = 0;
+            rotMode = "right"
+            rotSign = 1.0
+        } 
+        let part = partitionOBJ(thing, planeNum, kk)
+        thing.triangles = part[0].triangles
+        while (thing.attributes[1].length < thing.attributes[0].length) {
+            thing.attributes[1].push([1.0, 1.0, 0.9])
+        }
+        left(ax, sign * Math.PI/2.0, rotMode, rotSign * kk)
+        for (let i = 0; i < part[1].triangles.length; i += 1) {
+            thing.triangles.push(part[1].triangles[i])
+        }
+        addNormals(thing)
+        window.geomA = setupGeomery(thing)
+        thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+        fillScreen()
+        window.addEventListener('resize', fillScreen)
+        return rotMode;
     }
 
+    function scramble() {
+        let cheatSheet = ""
+        for (let i = 0; i < 20; i += 1) {
+            let randVal = Math.floor(Math.random() * 6);
+            cheatSheet = "\n" + rotateHalf(randVal) + "\n" + cheatSheet;
+        }
+        console.log("Cheat sheet: ", cheatSheet)
+    }
+    document.getElementById('scrambleButton').addEventListener('click', scramble);
+    
     function tick(milliseconds) {
         let seconds = milliseconds / 1000;
         // let sign = 1
@@ -1127,6 +1189,9 @@ function addNormals(geom) {
         } 
         if (letsGo) {
             let kk = cubeDim == 3 ? 0.05 : 0.0
+            if (keysBeingPressed["Shift"]) {
+                sign *= -1
+            } 
             if (keysBeingPressed['q']) {
                 let ax = right
                 ax = [1, 0, 0]
@@ -1136,8 +1201,7 @@ function addNormals(geom) {
                 thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
                 fillScreen()
                 window.addEventListener('resize', fillScreen)
-            } 
-            if (keysBeingPressed['e']) {
+            } if (keysBeingPressed['e']) {
                 let ax = right
                 ax = [1, 0, 0]
                 left(forward, Math.PI/2.0, "all", kk)
@@ -1146,122 +1210,18 @@ function addNormals(geom) {
                 thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
                 fillScreen()
                 window.addEventListener('resize', fillScreen)
-            } 
-
-            if (keysBeingPressed["Shift"]) {
-                // console.log("IM SHIFTING")
-                sign *= -1
-            } 
-            if (keysBeingPressed['l']) {
-                // wd -= 0.005
-                let ax = right
-
-                a = partitionOBJ(thing, 0, -kk)
-                thing.triangles = a[0].triangles
-                while (thing.attributes[1].length < thing.attributes[0].length) {
-                    thing.attributes[1].push([1.0, 1.0, 0.9])
-                }
-                left(ax, sign * Math.PI/2.0, "left", -kk)
-                for (let i = 0; i < a[1].triangles.length; i += 1) {
-                    thing.triangles.push(a[1].triangles[i])
-                }
-                // console.log("new geom: ", thing)
-                addNormals(thing)
-
-                window.geomA = setupGeomery(thing)
-                thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
-                fillScreen()
-                window.addEventListener('resize', fillScreen)
-                // eye = [eye[0] - 0.02 * forward[0], eye[1] - 0.02 * forward[1], eye[2] - 0.02 * forward[2]]
-                // center = [center[0] - 0.02 * forward[0], center[1] - 0.02 * forward[1], center[2] - 0.02 * forward[2]]
-            } 
-            if (keysBeingPressed['r']) {
-                let ax = right
-
-                a = partitionOBJ(thing, 0, kk)
-                thing.triangles = a[0].triangles
-                while (thing.attributes[1].length < thing.attributes[0].length) {
-                    thing.attributes[1].push([1.0, 1.0, 0.9])
-                }
-                left(ax, sign * Math.PI/2.0, "right", kk)
-                for (let i = 0; i < a[1].triangles.length; i += 1) {
-                    thing.triangles.push(a[1].triangles[i])
-                }
-                addNormals(thing)
-                window.geomA = setupGeomery(thing)
-                thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
-                fillScreen()
-                window.addEventListener('resize', fillScreen)
-            } 
-            if (keysBeingPressed['u']) {
-                let ax = right
-
-                a = partitionOBJ(thing, 2, kk)
-                thing.triangles = a[0].triangles
-                while (thing.attributes[1].length < thing.attributes[0].length) {
-                    thing.attributes[1].push([1.0, 1.0, 0.9])
-                }
-                left(forward, sign * Math.PI/2.0, "top", kk)
-                for (let i = 0; i < a[1].triangles.length; i += 1) {
-                    thing.triangles.push(a[1].triangles[i])
-                }
-                addNormals(thing)
-                window.geomA = setupGeomery(thing)
-                thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
-                fillScreen()
-                window.addEventListener('resize', fillScreen)
-            } 
-            if (keysBeingPressed['d']) {
-                let ax = right
-                a = partitionOBJ(thing, 2, -kk)
-                thing.triangles = a[0].triangles
-                while (thing.attributes[1].length < thing.attributes[0].length) {
-                    thing.attributes[1].push([1.0, 1.0, 0.9])
-                }
-                left(forward, sign * Math.PI/2.0, "bottom", -kk)
-                for (let i = 0; i < a[1].triangles.length; i += 1) {
-                    thing.triangles.push(a[1].triangles[i])
-                }
-                addNormals(thing)
-                window.geomA = setupGeomery(thing)
-                thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
-                fillScreen()
-                window.addEventListener('resize', fillScreen)
-            } 
-            if (keysBeingPressed['b']) {
-                let ax = right
-
-                a = partitionOBJ(thing, 1, kk)
-                thing.triangles = a[0].triangles
-                while (thing.attributes[1].length < thing.attributes[0].length) {
-                    thing.attributes[1].push([1.0, 1.0, 0.9])
-                }
-                left(up, sign * Math.PI/2.0, "sideA", kk)
-                for (let i = 0; i < a[1].triangles.length; i += 1) {
-                    thing.triangles.push(a[1].triangles[i])
-                }
-                addNormals(thing)
-                window.geomA = setupGeomery(thing)
-                thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
-                fillScreen()
-                window.addEventListener('resize', fillScreen)
-            } 
-            if (keysBeingPressed['f']) {
-                let ax = right
-                a = partitionOBJ(thing, 1, -kk)
-                thing.triangles = a[0].triangles
-                while (thing.attributes[1].length < thing.attributes[0].length) {
-                    thing.attributes[1].push([1.0, 1.0, 0.9])
-                }
-                left(up, sign * Math.PI/2.0, "sideB", -kk)
-                for (let i = 0; i < a[1].triangles.length; i += 1) {
-                    thing.triangles.push(a[1].triangles[i])
-                }
-                addNormals(thing)
-                window.geomA = setupGeomery(thing)
-                thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
-                fillScreen()
-                window.addEventListener('resize', fillScreen)
+            } if (keysBeingPressed['l']) { // left half rotation
+                rotateHalf(4);
+            } if (keysBeingPressed['r']) { // right half rotation
+                rotateHalf(5);
+            } if (keysBeingPressed['u']) { // top half rotation
+                rotateHalf(0);
+            } if (keysBeingPressed['d']) { // bottom half rotation
+                rotateHalf(1);
+            } if (keysBeingPressed['b']) { // front half
+                rotateHalf(2);
+            } if (keysBeingPressed['f']) { // bottom half
+                rotateHalf(3);
             } 
         }
         if (keysBeingPressed['x']) {
