@@ -1196,7 +1196,7 @@ function addNormals(geom) {
     document.getElementById('resetButton').addEventListener('click', resetModel);
 
     function useSample() {
-        fetch('Tom.obj')
+        fetch('tom.obj')
         .then(response => {
             if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
