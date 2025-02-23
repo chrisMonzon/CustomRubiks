@@ -570,7 +570,7 @@ function addNormals(geom) {
         <div style="display: flex; flex-direction: column;">
             <p style="font-family: Shrikhand; font-size:30px;  margin:0;">Custom 2x2x2 Rubik's Cube</p>
             <b style="font-size:12px; margin: 0;"><i>BETA 0.5.1 - COMING SOON: 3x3x3</i></b>
-            <a href="https://github.com/chrisMonzon/CustomRubiks">© 2025 Christopher Monzon</a>
+            <a href="https://chrisMonzon.github.io/CustomRubiks">© 2025 Christopher Monzon</a>
         </div>
     </div>    
     <div style="white-space: pre; font-size:3px;"></div>
@@ -582,16 +582,19 @@ function addNormals(geom) {
             <b>Upload OBJ file:</b>
           <input id="objUpload" type="file" accept=".obj" />
         </label>
-        <input id="submit" type="submit" value="Load" />
+        <input  style="color: transparent; background-color: transparent; border-color: transparent; cursor: default;" id="submit" type="submit" value="Load" />
       </form>
       <button id="scrambleButton" style="margin-top: 10px;">Scramble Cube</button>
+      <br>
+      <button id="resetButton" style="margin-top: 0px;">Reset Model</button>
 
       <br>
+      
     <!-- <form class="controls" action="javascript:void(0);"> -->
         
         <!-- <label>Provided assets: <input id="file_path" type="text" value="path.obj" /></label> -->
         <!-- <label>Image path: <input id="image_path" type="text" value="path.png" /></label> -->
-        <div id="currAxis" style="font-size:13px;"></div>
+        <div id="currAxis" style="font-size:13px; margin-top: 5px;"></div>
         <!-- <input id="submit" type="submit" value="Load" /> -->
     <!-- </form> -->
     
@@ -601,7 +604,7 @@ function addNormals(geom) {
         <div class="controls" style="font-size:8px;">
             <br>
             <br>
-        <b style="font-size: 15px;">Rubik's move controls:</b>
+        <b style="font-size: 15px;">Cube controls:</b>
         <p style="font-size: 10px;">The rotation hotkeys match with </p>
         <p style="font-size: 10px;">  the notation below:</p>
         <img src="ref.png" alt="rubik's cube icon" style="width:200px;height:200px;">
@@ -715,7 +718,7 @@ function addNormals(geom) {
 
     function partitionOBJ(geom, planeDim, planeCoord) {
         let vertices = geom.attributes[0]
-        let gapVal = 0.001// 4
+        let gapVal = 0.0001// 4
         // console.log("tirCount = ", geom.triangles.length)
         let count = geom.triangles.length
         
@@ -761,25 +764,10 @@ function addNormals(geom) {
 
     function partitionOBJinit(geom, planeDim, planeCoord) {
         let vertices = geom.attributes[0]
-        let gapVal = 0.001// 4
+        let gapVal = 0.0001// 4
         // console.log("tirCount = ", geom.triangles.length)
         let count = geom.triangles.length
         
-        // for (let i = 0; i < geom.attributes[0].length; i += 1) {
-        //     if (geom.attributes[0][i][planeDim] >= planeCoord) {
-        //         for (let j = 0; j < 3; j += 1) {
-        //             if (j == planeDim) {
-        //                 geom.attributes[0][i][j] += 20.0 * gapVal
-        //             }
-        //         }
-        //     } else {
-        //         for (let j = 0; j < 3; j += 1) {
-        //             if (j == planeDim) {
-        //                 geom.attributes[0][i][j] -= 20.0 * gapVal
-        //             }
-        //         }
-        //     }
-        // }
         // make global
         let vertMap = new Map();
 
@@ -1166,6 +1154,37 @@ function addNormals(geom) {
     }
     document.getElementById('scrambleButton').addEventListener('click', scramble);
     
+    function resetModel() {
+        thing = parseOBJ(objText);
+        // console.log("thing = ", thing)
+        firstTime = 1;
+        normOk = 1;
+        let kk = 0.0
+        addNormals(thing);
+        // let c = computeObjectMid(thing.attributes[0])
+        for (let i = 0; i < 3; i += 1) {
+            a = partitionOBJinit(thing, i, -kk)
+            thing.triangles = a[0].triangles
+            while (thing.attributes[1].length < thing.attributes[0].length) {
+                thing.attributes[1].push([1.0, 1.0, 0.9])
+            }
+            for (let i = 0; i < a[1].triangles.length; i += 1) {
+                thing.triangles.push(a[1].triangles[i])
+            }
+            addNormals(thing);
+            while (thing.attributes[2].length < thing.attributes[0].length) {
+                thing.attributes[2].push(thing.attributes[2][0])
+            }
+            // console.log0
+            // addNormals(thing);
+            window.geomA = setupGeomery(thing);
+            thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
+            console.log("User model loaded:", thing);
+            fillScreen(); // adjust viewport if needed
+        }
+    }
+    document.getElementById('resetButton').addEventListener('click', resetModel);
+
     function tick(milliseconds) {
         let seconds = milliseconds / 1000;
         // let sign = 1
@@ -1229,6 +1248,7 @@ function addNormals(geom) {
             } if (keysBeingPressed['f']) { // bottom half
                 rotateHalf(3);
             } 
+               
         }
         if (keysBeingPressed['x']) {
             // pd += 0.005
@@ -1573,12 +1593,19 @@ function addNormals(geom) {
     var firstTime = 1
     var letsGo = 0;
 
+    function getDistance(a, b) {
+        const xDiff = a[0] - b[0];
+        const yDiff = a[1] - b[1];
+        const zDiff = a[2] - b[2]
+        return Math.sqrt(xDiff * xDiff + yDiff * yDiff + zDiff * zDiff);
+    }
+    var objText;
     document.getElementById('objUpload').addEventListener('change', function(event) {
         const file = event.target.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function(e) {
-            const objText = e.target.result;
+            objText = e.target.result;
             // Parse the uploaded OBJ file.
             letsGo = 1;
             thing = parseOBJ(objText);
@@ -1599,10 +1626,16 @@ function addNormals(geom) {
                     thing.triangles.push(a[1].triangles[i])
                 }
                 addNormals(thing);
-                let j = 0;
+                
+                // let j = 0;
+                // in partitionInit add list of new triangle indices
                 while (thing.attributes[2].length < thing.attributes[0].length) {
-                    thing.attributes[2].push(thing.attributes[2][j])
-                    j += 1
+                    // let closeIdx = 0
+                    // for (let j = 0; j < thing.attributes[0].length; j += 1) {
+                    //     if (getDistance(thing.attributes[0][i], thing.triangles))
+                    // }
+                    thing.attributes[2].push(thing.attributes[2][0])
+                    // j += 1
                 }
             }
             // console.log0
