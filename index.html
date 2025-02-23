@@ -496,7 +496,8 @@ function addNormals(geom) {
 }
 </script>
 
-
+<link href='https://fonts.googleapis.com/css?family=Rubik' rel='stylesheet'>
+<link href='https://fonts.googleapis.com/css?family=Shrikhand' rel='stylesheet'>
 <style>
     body {
       background-color: #89CFF0; 
@@ -504,53 +505,119 @@ function addNormals(geom) {
       padding-left: 20px;
       padding-top: 10px;
       font-family: American Typewriter, serif;
+      /* font-family: Rubik; */
+    }
+    .container {
+        display: flex;
+        justify-content: center; /* Centers the canvas horizontally */
+        align-items: flex-start;
+        /* gap: 20px; Space between controls and canvas */
+    }
+
+    .controls {
+        text-align: left; /* Ensures text stays left-aligned */
+        min-width: 150px; /* Prevents controls from shrinking too much */
+        margin-right: 7.5vh;
+        margin-right: 10vh;
     }
 
     #glCanvas {
-      display: block;
-      margin: 20px auto;
-      width: 100vh;  
-      height: 62.5vh;  
-      border: 3px solid #000;
-      border-radius: 40px;
+        display: block;
+        margin: 20px auto;
+        margin-left: 20vh;
+        margin-right: 8vh;
+        width: 100vh;  
+        min-width: 60vh;
+        height: 62.5vh;  
+        border: 3px solid #000;
+        border-radius: 40px;
     }
+
+    li {
+        margin: 10px 0;
+    }
+    
+    .overlay {
+        position: absolute; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 102px; 
+        background-color: #003366; 
+        z-index: 0;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
+    }
+
+    a {
+        text-decoration: none;
+        color: rgba(250, 198, 66, 0.926);
+        font-size:10px;
+        margin:2px;
+    }
+
+    .header {
+        display: flex;
+        position: relative;
+        z-index: 1; 
+        align-items: center;
+        color: rgba(250, 198, 66, 0.926);
+    }
+
+
   </style>
 </head>
 <body>
-    <div style="display: flex; align-items: center;">
-        <img src="rubixcube.png" alt="rubik's cube icon" style="width:50px;height:50px; margin-right: 10px;">
+    <div class="overlay"></div>
+    <div class="header">
+        <img src="rubixcube.png" alt="rubik's cube icon" style="width:80px;height:80px; margin-right: 10px;">
         <div style="display: flex; flex-direction: column;">
-            <b style="font-size:30px;">Custom Rubik's Cube Emulator</b>
-            <p style="font-size:15px; margin:0;">© 2025 Christoper Monzon</p>
+            <p style="font-family: Shrikhand; font-size:30px;  margin:0;">Custom 2x2x2 Rubik's Cube</p>
+            <b style="font-size:12px; margin: 0;"><i>BETA 0.5.1 - COMING SOON: 3x3x3</i></b>
+            <a href="https://chrisMonzon.github.io">© 2025 Christoper Monzon</a>
         </div>
     </div>    
-    <p>BETA 0.5.2 - COMING SOON: 3x3x3</p>
-    <p style="font-size:8px;">CONTROLS:</p>
-    <ul style="font-size:8px;">
-        <li>u: downward rotation wrt x-axis</li>
-        <li>j: rightward rotation wrt z-axis</li>
-        <li>i: left half&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp• o: right half </li>
-        <li>k: top half&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp• l: bottom half</li>
-        <li>n: back half&nbsp&nbsp&nbsp&nbsp• m: front half</li>
-        <li>shift: invert rotation direction</li>
-    </ul>
+    <div style="white-space: pre; font-size:3px;"></div>
+    <br>
+    <p style="font-size:10px;">Upload a .OBJ file to create a 2x2x2 Rubik's cube!</p>
+    
     <form class="controls" action="javascript:void(0);">
-        <label>Upload OBJ file:
+        <label style="font-size:10px;">
+            <b>Upload OBJ file:</b>
           <input id="objUpload" type="file" accept=".obj" />
         </label>
         <input id="submit" type="submit" value="Load" />
       </form>
+      <br>
     <!-- <form class="controls" action="javascript:void(0);"> -->
         
         <!-- <label>Provided assets: <input id="file_path" type="text" value="path.obj" /></label> -->
         <!-- <label>Image path: <input id="image_path" type="text" value="path.png" /></label> -->
-        <div id="currAxis">Fog:</div>
+        <div id="currAxis" style="font-size:13px;"></div>
         <!-- <input id="submit" type="submit" value="Load" /> -->
     <!-- </form> -->
     
-    
-    <canvas id="glCanvas" width="1200" height="600"></canvas>
-
+    <div class="container">
+        <!-- <div style="display: flex; flex-direction: column;"> -->
+        <canvas id="glCanvas" width="1200" height="600"></canvas>
+        <div class="controls" style="font-size:8px;">
+            <br>
+            <br>
+        <b style="font-size: 15px;">Rubik's move controls:</b>
+        <p style="font-size: 10px;">The rotation hotkeys match with </p>
+        <p style="font-size: 10px;">  the notation below:</p>
+        <img src="ref.png" alt="rubik's cube icon" style="width:200px;height:200px;">
+        <br>
+        <br>
+        <b style="font-size: 15px;">Other controls:</b>
+        <ul style="font-size:10px;">
+            <li> ↑ ↓ → ← : Camera rotation</li>
+            <li> w/a/s/x : Forward/left/backward/right</li>
+            <li> q : Rotate whole model down</li>
+            <li> e : Rotate whole model right</li>
+            <li>shift: invert rotation direction</li>
+        </ul>
+        </div>
+    </div>
     <!-- All the other code in one big script element. -->
 <script>
     var thing;
@@ -966,8 +1033,8 @@ function addNormals(geom) {
         gl.useProgram(programDef)
         
         let v = m4view(eye, [0,0,0], [0,1,1])
-        let vScalar = 2.25
-        v = m4mul(v, m4scale(vScalar,vScalar,vScalar));
+        let vScalar = 2.8
+        v = m4mul(v, m4scale(vScalar * 0.9,vScalar,vScalar));
         gl.uniformMatrix4fv(programDef.uniforms.mv, false, v) // , m4mul(v,m)
         gl.uniformMatrix4fv(programDef.uniforms.p, false, p)
         
@@ -1062,7 +1129,7 @@ function addNormals(geom) {
         } 
         if (letsGo) {
             let kk = cubeDim == 3 ? 0.05 : 0.0
-            if (keysBeingPressed['u']) {
+            if (keysBeingPressed['q']) {
                 let ax = right
                 ax = [1, 0, 0]
                 left(ax, Math.PI/2.0, "all", kk)
@@ -1072,7 +1139,7 @@ function addNormals(geom) {
                 fillScreen()
                 window.addEventListener('resize', fillScreen)
             } 
-            if (keysBeingPressed['j']) {
+            if (keysBeingPressed['e']) {
                 let ax = right
                 ax = [1, 0, 0]
                 left(forward, Math.PI/2.0, "all", kk)
@@ -1087,7 +1154,7 @@ function addNormals(geom) {
                 // console.log("IM SHIFTING")
                 sign *= -1
             } 
-            if (keysBeingPressed['i']) {
+            if (keysBeingPressed['l']) {
                 // wd -= 0.005
                 let ax = right
 
@@ -1110,7 +1177,7 @@ function addNormals(geom) {
                 // eye = [eye[0] - 0.02 * forward[0], eye[1] - 0.02 * forward[1], eye[2] - 0.02 * forward[2]]
                 // center = [center[0] - 0.02 * forward[0], center[1] - 0.02 * forward[1], center[2] - 0.02 * forward[2]]
             } 
-            if (keysBeingPressed['o']) {
+            if (keysBeingPressed['r']) {
                 let ax = right
 
                 a = partitionOBJ(thing, 0, kk)
@@ -1128,7 +1195,7 @@ function addNormals(geom) {
                 fillScreen()
                 window.addEventListener('resize', fillScreen)
             } 
-            if (keysBeingPressed['k']) {
+            if (keysBeingPressed['u']) {
                 let ax = right
 
                 a = partitionOBJ(thing, 2, kk)
@@ -1146,7 +1213,7 @@ function addNormals(geom) {
                 fillScreen()
                 window.addEventListener('resize', fillScreen)
             } 
-            if (keysBeingPressed['l']) {
+            if (keysBeingPressed['d']) {
                 let ax = right
                 a = partitionOBJ(thing, 2, -kk)
                 thing.triangles = a[0].triangles
@@ -1163,7 +1230,7 @@ function addNormals(geom) {
                 fillScreen()
                 window.addEventListener('resize', fillScreen)
             } 
-            if (keysBeingPressed['n']) {
+            if (keysBeingPressed['b']) {
                 let ax = right
 
                 a = partitionOBJ(thing, 1, kk)
@@ -1181,7 +1248,7 @@ function addNormals(geom) {
                 fillScreen()
                 window.addEventListener('resize', fillScreen)
             } 
-            if (keysBeingPressed['m']) {
+            if (keysBeingPressed['f']) {
                 let ax = right
                 a = partitionOBJ(thing, 1, -kk)
                 thing.triangles = a[0].triangles
@@ -1199,7 +1266,7 @@ function addNormals(geom) {
                 window.addEventListener('resize', fillScreen)
             } 
         }
-        if (keysBeingPressed['d']) {
+        if (keysBeingPressed['x']) {
             // pd += 0.005
             eye = [eye[0] + 0.02 * right[0], eye[1] + 0.02 * right[1], eye[2] + 0.02 * right[2]]
             center = [center[0] + 0.02 * right[0], center[1] + 0.02 * right[1], center[2] + 0.02 * right[2]]
