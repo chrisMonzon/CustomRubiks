@@ -157,11 +157,13 @@ void main() {
                 fragColor = vec4(0.75, 0.75, 0.75, 1.0);
                 // fragColor = vec4(sideColor * diffuse + specular, 1.0);
             }
+            if (color2.b == 1.234) {
+                fragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            }
         }
     </script>
     
 
-<!-- Code I don't expect to change. -->
 <script>
 const IlliniWhite = new Float32Array([1, 1, 1, 1])
 const IdentityMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1])
@@ -500,35 +502,51 @@ function addNormals(geom) {
 <style>
     body {
       background-color: #89CFF0; 
+      /* background-color: #f0dd89;  */
       margin: 0;
-      padding-left: 20px;
+      padding-left: 30px;
       padding-top: 10px;
       font-family: American Typewriter, serif;
       /* font-family: Rubik; */
     }
     .container {
         display: flex;
-        justify-content: center; /* Centers the canvas horizontally */
+        justify-content: center;
         align-items: flex-start;
-        /* gap: 20px; Space between controls and canvas */
+        gap: 20px; 
+         /* Space between controls and canvas */
     }
 
     .controls {
-        text-align: left; /* Ensures text stays left-aligned */
-        min-width: 150px; /* Prevents controls from shrinking too much */
-        margin-right: 7.5vh;
+        text-align: left;
+        min-width: 150px;
         margin-right: 10vh;
     }
 
+    .cubecontrols img{
+        /* text-align: left;*/
+        /* min-width: 150px;*/
+        margin-top: 20px;
+        margin-left: 56vh;
+        margin-right: 15vh;
+        width: 300px;
+        height: auto;
+        /* padding-right: 120px;
+        padding-left:20px; */
+        
+    }
+
+    
     #glCanvas {
         display: block;
-        margin: 20px auto;
-        margin-left: 20vh;
-        margin-right: 8vh;
-        width: 100vh;  
-        min-width: 60vh;
-        height: 62.5vh;  
-        border: 3px solid #000;
+        /* margin: 20px auto; */
+        margin-left: 4vh;
+        margin-top: 5px;
+        /* margin-right: 140vh; */
+        width: 80vh;  
+        min-width: 30vh;
+        height: 60vh;  
+        border: 5px solid #000;
         border-radius: 40px;
     }
 
@@ -561,6 +579,65 @@ function addNormals(geom) {
         color: rgba(250, 198, 66, 0.926);
     }
 
+    .logo-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* overflow: hidden;  */
+        width:100px;
+        height:100px;
+        border-radius: 50%; 
+        /* border: 5px solid #000000; */
+        /* margin-left: 0px; */
+        background: transparent;
+        /* border: none !important; */
+        /* font-size:0; */
+        transition: transform 0.3s ease, outline-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    table {
+        margin-left: 2vh;
+        margin-top: 3vh;
+        padding-right: 1vh;
+    }
+    th {
+        padding-right: 20px;
+    }
+    
+    th p {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .logo-button:hover {
+        transform: scale(1.05); 
+        outline-color: #000000; 
+        box-shadow: 0 10px 2px rgba(0, 0, 0, 0.4); 
+    }
+    
+    .img_button {
+        /* margin-left: 0; */
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 50%; 
+        border: 5px solid #000000;
+    }
+    .controlButtons {
+        margin-left: 35px;
+        /* margin-left: 70px;
+         */
+        display: flex;
+        justify-content: left;
+        align-items: flex-start;
+        margin-bottom: -20px;
+    }
+    
+    label {
+        /* margin: 0; */
+        display: block;
+        
+    }
 
   </style>
 </head>
@@ -570,8 +647,8 @@ function addNormals(geom) {
         <img src="rubixcube.png" alt="rubik's cube icon" style="width:80px;height:80px; margin-right: 10px;">
         <div style="display: flex; flex-direction: column;">
             <p style="font-family: Shrikhand; font-size:30px;  margin:0;">Custom 2x2x2 Rubik's Cube</p>
-            <b style="font-size:12px; margin: 0;"><i>BETA 0.5.1 - COMING SOON: 3x3x3</i></b>
-            <a href="https://chrisMonzon.github.io/CustomRubiks">© 2025 Christopher Monzon</a>
+            <b style="font-size:12px; margin: 0;"><i>BETA 0.7.2 - COMING SOON: 3x3x3</i></b>
+            <a href="https://chrisMonzon.github.io">2025 Christopher Monzon | No Copyright Infringement Intended</a>
         </div>
     </div>    
     <div style="white-space: pre; font-size:3px;"></div>
@@ -579,46 +656,89 @@ function addNormals(geom) {
     <p style="font-size:10px;">Upload a .OBJ file to create a 2x2x2 Rubik's cube!</p>
     
     <form class="controls" action="javascript:void(0);">
-        <label style="font-size:10px;">
-            <b>Upload OBJ file:</b>
+        <input  style="color: transparent; background-color: transparent; border-color: transparent; cursor: default;" id="submit" type="submit" value="Load" />
+    </form>
+      
+    <div class="container">
+        <div class="controls" style="padding-left: 10px;">
+        <b>Select a pre-loaded model:</b>
+        <!-- <div style="display: flex; flex-direction: column;"> -->
+        <table style="margin-top: 25px; margin-left: 10px;">   
+        <tr>
+            <th>
+                <button id="sampleButtonSuz" class="logo-button">
+                    <img src="icons/suzanne_icon2.png" alt="rubik's cube icon" class="img_button">
+                </button>
+                <p>Suzanne</p>
+            </th>
+            <th>
+                <button id="sampleButtonTom" class="logo-button">
+                    <img src="icons/tom_icon.png" alt="rubik's cube icon" class="img_button">
+                </button>
+                <p>Tom</p>
+            </th>   
+        </tr>
+        <tr>
+            <th>
+                <button id="sampleButtonSonic" class="logo-button">
+                    <img src="icons/sonic_icon.png" alt="rubik's cube icon" class="img_button">
+                </button>
+                <p>Sonic</p>
+            </th>   
+            <th>
+                <button id="sampleButtonToad" class="logo-button">
+                    <img src="icons/toad_icon.png" alt="rubik's cube icon" class="img_button">
+                </button>
+                <p>Toad</p>
+            </th>
+        </tr>
+        <tr>
+            <th>
+                <button id="sampleButtonChopper" class="logo-button">
+                    <img src="icons/chopper_icon.png" alt="rubik's cube icon" class="img_button">
+                </button>
+                <p>Chopper</p>
+            </th>
+            <th>
+                <button id="sampleButtonSpongebob" class="logo-button">
+                    <img src="icons/Spongebob_icon.png" alt="rubik's cube icon" class="img_button">
+                </button>
+                <p>Spongebob</p>
+            </th>   
+        </tr>
+        </table>
+        <label>
+            <b>Upload your own model (OBJ):</b>
           <input id="objUpload" type="file" accept=".obj" />
         </label>
-        <input  style="color: transparent; background-color: transparent; border-color: transparent; cursor: default;" id="submit" type="submit" value="Load" />
-      </form>
-      <button id="scrambleButton" style="margin-top: 10px;">Scramble Cube</button>
-      <br>
-      <button id="resetButton" style="margin-top: 0px;">Reset Model</button>
-
-      <br>
-      <button id="sampleButton" style="margin-top: 0px;">Summon Tom</button>
-    <!-- <form class="controls" action="javascript:void(0);"> -->
-        
-        <!-- <label>Provided assets: <input id="file_path" type="text" value="path.obj" /></label> -->
-        <!-- <label>Image path: <input id="image_path" type="text" value="path.png" /></label> -->
-        <div id="currAxis" style="font-size:13px; margin-top: 5px;"></div>
-        <!-- <input id="submit" type="submit" value="Load" /> -->
-    <!-- </form> -->
-    
-    <div class="container">
-        <!-- <div style="display: flex; flex-direction: column;"> -->
-        <canvas id="glCanvas" width="1200" height="600"></canvas>
-        <div class="controls" style="font-size:8px;">
+        </div>
+        <div class="controls">
+            <div class="controlButtons">
+                <button id="scrambleButton" >Scramble Cube</button>
+                <p>&nbsp</p>
+                <button id="resetButton">Reset Model</button>
+            </div>
+            <div id="currAxis" style="font-size:13px; margin-top: 10px; margin-left: 35px;"></div>
+            <canvas id="glCanvas" width="1200" height="600"></canvas>
+        </div>
+        <div class="cubecontrols" style="font-size:10px; margin-top: 35px;">
+            <!-- <br>
+            <br>
+            <b style="font-size: 20px;">Cube controls:</b>
+            <p style="font-size: 13px;">The rotation hotkeys match with the notation below:</p>
+            <p style="font-size: 13px;">  </p>
+            <img src="ref.png" alt="rubik's cube icon" style="width:200px;height:200px;">
             <br>
             <br>
-        <b style="font-size: 15px;">Cube controls:</b>
-        <p style="font-size: 10px;">The rotation hotkeys match with </p>
-        <p style="font-size: 10px;">  the notation below:</p>
-        <img src="ref.png" alt="rubik's cube icon" style="width:200px;height:200px;">
-        <br>
-        <br>
-        <b style="font-size: 15px;">Other controls:</b>
-        <ul style="font-size:10px;">
-            <li> ↑ ↓ → ← : Camera rotation</li>
-            <li> w/a/s/x : Forward/left/backward/right</li>
-            <li> q : Rotate whole model down</li>
-            <li> e : Rotate whole model right</li>
-            <li>shift: invert rotation direction</li>
-        </ul>
+            <b style="font-size: 15px;">Other controls:</b>
+            <ul style="font-size:12px;">
+                <li> ↑ ↓ → ← : Camera rotation</li>
+                <li> w/a/s/x : Forward/left/backward/right</li>
+                <li> q : Rotate whole model down</li>
+                <li> e : Rotate whole model right</li>
+                <li>shift: invert rotation direction</li>
+            </ul> -->
+            <img src="controls_note2.png" alt="">
         </div>
     </div>
     <!-- All the other code in one big script element. -->
@@ -1021,8 +1141,8 @@ function addNormals(geom) {
         gl.useProgram(programDef)
         
         let v = m4view(eye, [0,0,0], [0,1,1])
-        let vScalar = 2.8
-        v = m4mul(v, m4scale(vScalar * 0.9,vScalar,vScalar));
+        let vScalar = 3
+        v = m4mul(v, m4scale(vScalar * 1.3,vScalar,vScalar));
         gl.uniformMatrix4fv(programDef.uniforms.mv, false, v) // , m4mul(v,m)
         gl.uniformMatrix4fv(programDef.uniforms.p, false, p)
         
@@ -1155,6 +1275,7 @@ function addNormals(geom) {
     }
     document.getElementById('scrambleButton').addEventListener('click', scramble);
     
+    var objectName;
     function resetModel() {
         thing = parseOBJ(objText);
         // console.log("thing = ", thing)
@@ -1168,17 +1289,19 @@ function addNormals(geom) {
             a = partitionOBJinit(thing, i, -kk)
             thing.triangles = a[0].triangles
             while (thing.attributes[1].length < thing.attributes[0].length) {
-                thing.attributes[1].push([1.0, 1.0, 0.9])
+                console.log("Pushing 1234")
+                thing.attributes[1].push([1.0, 1.0, 1.234])
             }
             for (let i = 0; i < a[1].triangles.length; i += 1) {
                 thing.triangles.push(a[1].triangles[i])
             }
             addNormals(thing);
             while (thing.attributes[2].length < thing.attributes[0].length) {
+                
                 thing.attributes[2].push(thing.attributes[2][0])
             }
             // console.log0
-            addNormals(thing);
+            // addNormals(thing);
             // window.geomA = setupGeomery(thing);
             thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
             // console.log("User model loaded:", thing);
@@ -1186,7 +1309,10 @@ function addNormals(geom) {
         }
         let ax = right
         ax = [1, 0, 0]
+        // console.log("obt = ", objText)
+        if (objectName != "models/suzanne.obj") {
         left(ax, -Math.PI/2.0, "all", kk)
+        }
         addNormals(thing)
         window.geomA = setupGeomery(thing)
         thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
@@ -1195,8 +1321,10 @@ function addNormals(geom) {
     }
     document.getElementById('resetButton').addEventListener('click', resetModel);
 
-    function useSample() {
-        fetch('tom.obj')
+    function useSample(fileName) {
+        console.log("Spawned ", fileName)
+        objectName = fileName;
+        fetch(fileName)
         .then(response => {
             if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -1211,7 +1339,13 @@ function addNormals(geom) {
             console.error('Error loading Tom.obj:', e);
         });
     }
-    document.getElementById('sampleButton').addEventListener('click', useSample);
+    // document.getElementById('sampleButton').addEventListener('click', useSample);
+    document.getElementById('sampleButtonSuz').addEventListener('click', () => useSample('models/suzanne.obj'));
+    document.getElementById('sampleButtonTom').addEventListener('click', () => useSample('models/Tom.obj'));
+    document.getElementById('sampleButtonSonic').addEventListener('click', () => useSample('models/Mobile_-_Sonic_Dash_-_Classic_Sonic.obj'));
+    document.getElementById('sampleButtonToad').addEventListener('click', () => useSample('models/toad.obj'));
+    document.getElementById('sampleButtonChopper').addEventListener('click', () => useSample('models/Tony_chopper.obj'));
+    document.getElementById('sampleButtonSpongebob').addEventListener('click', () => useSample('models/Spongebob_Squarepants.obj'));
 
     function tick(milliseconds) {
         let seconds = milliseconds / 1000;
@@ -1304,15 +1438,15 @@ function addNormals(geom) {
         document.body.style.margin = '0'
         canvas.style.width = '100vw'
         canvas.style.height = '100vh'
-        canvas.width = canvas.clientWidth
-        canvas.height = canvas.clientHeight
+        // canvas.width = canvas.clientWidth
+        // canvas.height = canvas.clientHeight
         canvas.style.width = ''
         canvas.style.height = ''
         if (window.gl) {
             // gl.viewport(0,0, canvas.width, canvas.height)
             gl.viewport(-1,1, canvas.width, canvas.height)
             // window.p = m4perspNegZ(1, 5, 1.5, canvas.width, canvas.height)
-            window.p = m4perspNegZ(0.01, 10, 2, canvas.width, canvas.height)
+            window.p = m4perspNegZ(0.01, 10, 1.0, canvas.width, canvas.height)
         }
     }
     
@@ -1721,7 +1855,7 @@ function addNormals(geom) {
             // console.log(blueCube)
             fillScreen()
             window.addEventListener('resize', fillScreen)
-            eye = [0,-2,0.5];
+            eye = [0,-4,.75];
             forward = [0, 0, -1];
             up = [0, 1, 0];
             center = [0, 0, 0]
