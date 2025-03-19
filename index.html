@@ -1257,7 +1257,7 @@ function addNormals(geom) {
         for (let i = 0; i < part[1].triangles.length; i += 1) {
             thing.triangles.push(part[1].triangles[i])
         }
-        addNormals(thing)
+        // addNormals(thing)
         window.geomA = setupGeomery(thing)
         thing.attributes = [thing.attributes[0], thing.attributes[1], thing.attributes[2], thing.attributes[3]]
         fillScreen()
